@@ -1,0 +1,38 @@
+{% if jellyfin_container_labels_traefik_enabled %}
+traefik.enable=true
+
+{% if jellyfin_container_labels_traefik_docker_network %}
+traefik.docker.network={{ jellyfin_container_labels_traefik_docker_network }}
+{% endif %}
+
+{% set middlewares = [] %}
+
+{% if jellyfin_container_labels_traefik_path_prefix != '/' %}
+traefik.http.middlewares.{{ jellyfin_identifier }}-slashless-redirect.redirectregex.regex=^({{ jellyfin_container_labels_traefik_path_prefix | quote }})$
+traefik.http.middlewares.{{ jellyfin_identifier }}-slashless-redirect.redirectregex.replacement=${1}/
+{% set middlewares = middlewares + [jellyfin_identifier + '-slashless-redirect'] %}
+{% endif %}
+
+{% if jellyfin_container_labels_traefik_path_prefix != '/' %}
+traefik.http.middlewares.{{ jellyfin_identifier }}-strip-prefix.stripprefix.prefixes={{ jellyfin_container_labels_traefik_path_prefix }}
+{% set middlewares = middlewares + [jellyfin_identifier + '-strip-prefix'] %}
+{% endif %}
+
+traefik.http.routers.{{ jellyfin_identifier }}.rule={{ jellyfin_container_labels_traefik_rule }}
+{% if jellyfin_container_labels_traefik_priority | int > 0 %}
+traefik.http.routers.{{ jellyfin_identifier }}.priority={{ jellyfin_container_labels_traefik_priority }}
+{% endif %}
+traefik.http.routers.{{ jellyfin_identifier }}.service={{ jellyfin_identifier }}
+{% if middlewares | length > 0 %}
+traefik.http.routers.{{ jellyfin_identifier }}.middlewares={{ middlewares | join(',') }}
+{% endif %}
+traefik.http.routers.{{ jellyfin_identifier }}.entrypoints={{ jellyfin_container_labels_traefik_entrypoints }}
+traefik.http.routers.{{ jellyfin_identifier }}.tls={{ jellyfin_container_labels_traefik_tls | to_json }}
+{% if jellyfin_container_labels_traefik_tls %}
+traefik.http.routers.{{ jellyfin_identifier }}.tls.certResolver={{ jellyfin_container_labels_traefik_tls_certResolver }}
+{% endif %}
+
+traefik.http.services.{{ jellyfin_identifier }}.loadbalancer.server.port={{ jellyfin_container_http_port }}
+{% endif %}
+
+{{ jellyfin_container_labels_additional_labels }}

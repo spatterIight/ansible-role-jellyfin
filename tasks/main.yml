@@ -1,0 +1,25 @@
+---
+
+- name: Install Jellyfin
+  tags:
+    - setup-all
+    - setup-jellyfin
+    - install-all
+    - install-jellyfin
+  block:
+    - name: Run Jellyfin validation tasks
+      when: jellyfin_enabled | bool
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
+
+    - name: Run Jellyfin installation tasks
+      when: jellyfin_enabled | bool
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
+
+- name: Uninstall Jellyfin
+  tags:
+    - setup-all
+    - setup-jellyfin
+  block:
+    - name: Run Jellyfin uninstallation tasks
+      when: not jellyfin_enabled | bool
+      ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"
