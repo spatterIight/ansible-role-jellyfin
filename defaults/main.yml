@@ -15,6 +15,7 @@ jellyfin_arch: amd64
 
 # The hostname at which jellyfin is served.
 jellyfin_hostname: ''
+jellyfin_published_server_url: "{{ jellyfin_hostname }}"
 
 # The path at which jellyfin is served.
 # This value must either be `/` or not end with a slash (e.g. `/jellyfin`).
@@ -118,61 +119,19 @@ jellyfin_container_http_port: 8096
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:8096"), or empty string to not expose.
 jellyfin_container_http_bind_port: ""
 
-# The port Jellyfin is serving the DLNA server on inside the container
-jellyfin_container_dlna_udp_port: 1900
+# The port Jellyfin is serving service auto-discovery on inside the container
+jellyfin_container_service_discover_port: 1900
 
-# Controls whether the container exposes the DLNA UDP port
+# Controls whether the container exposes the 1900 UDP port
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:1900"), or empty string to not expose.
-jellyfin_container_dlna_udp_bind_port: ""
+jellyfin_container_service_discover_bind_port: ""
 
-# The port Jellyfin is serving the DLNA server on inside the container
-jellyfin_container_dlna_tcp_port: 32469
+# The port Jellyfin is serving client auto-discovery on inside the container
+jellyfin_container_client_discover_port: 7359
 
-# Controls whether the container exposes the 32469 TCP port
-# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:32469"), or empty string to not expose.
-jellyfin_container_dlna_tcp_bind_port: ""
-
-# The port Jellyfin is serving the Bonjour/Avahi server on inside the container
-jellyfin_container_bonjour_port: 5353
-
-# Controls whether the container exposes the Bonjour/Avahi port
-# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:5353"), or empty string to not expose.
-jellyfin_container_bonjour_bind_port: ""
-
-# The port Jellyfin is serving the 'Jellyfin for Roku via Jellyfin Companion' server on inside the container
-jellyfin_container_roku_port: 8324
-
-# Controls whether the container exposes the 'Jellyfin for Roku via Jellyfin Companion' port
-# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:8324"), or empty string to not expose.
-jellyfin_container_roku_bind_port: ""
-
-# The port Jellyfin is serving the 'GDM network discovery' server on inside the container
-jellyfin_container_gdm_port_01: 32410
-
-# Controls whether the container exposes the 'GDM network discovery' port
-# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:32410"), or empty string to not expose.
-jellyfin_container_gdm_bind_port_01: ""
-
-# The port Jellyfin is serving the 'GDM network discovery' server on inside the container
-jellyfin_container_gdm_port_02: 32412
-
-# Controls whether the container exposes the 'GDM network discovery' port
-# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:32412"), or empty string to not expose.
-jellyfin_container_gdm_bind_port_02: ""
-
-# The port Jellyfin is serving the 'GDM network discovery' server on inside the container
-jellyfin_container_gdm_port_03: 32413
-
-# Controls whether the container exposes the 'GDM network discovery' port
-# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:32413"), or empty string to not expose.
-jellyfin_container_gdm_bind_port_03: ""
-
-# The port Jellyfin is serving the 'GDM network discovery' server on inside the container
-jellyfin_container_gdm_port_04: 32414
-
-# Controls whether the container exposes the 'GDM network discovery' port
-# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:32414"), or empty string to not expose.
-jellyfin_container_gdm_bind_port_04: ""
+# Controls whether the container exposes the 7359 UDP port
+# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:7359"), or empty string to not expose.
+jellyfin_container_client_discover_bind_port: ""
 
 # To inject your own other container labels, see `jellyfin_container_labels_additional_labels`.
 jellyfin_container_labels_traefik_enabled: true

@@ -36,29 +36,11 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
 			{% if jellyfin_container_http_bind_port %}
 			-p {{ jellyfin_container_http_bind_port }}:{{ jellyfin_container_http_port }} \
 			{% endif %}
-			{% if jellyfin_container_dlna_udp_bind_port %}
-			-p {{ jellyfin_container_dlna_udp_bind_port }}:{{ jellyfin_container_dlna_udp_port }}/udp \
+			{% if jellyfin_container_service_discover_bind_port %}
+			-p {{ jellyfin_container_service_discover_bind_port }}:{{ jellyfin_container_service_discover_port }}/udp \
 			{% endif %}
-			{% if jellyfin_container_dlna_tcp_bind_port %}
-			-p {{ jellyfin_container_dlna_tcp_bind_port }}:{{ jellyfin_container_dlna_tcp_port }} \
-			{% endif %}
-			{% if jellyfin_container_bonjour_bind_port %}
-			-p {{ jellyfin_container_bonjour_bind_port }}:{{ jellyfin_container_bonjour_port }}/udp \
-			{% endif %}
-			{% if jellyfin_container_roku_bind_port %}
-			-p {{ jellyfin_container_roku_bind_port }}:{{ jellyfin_container_roku_port }} \
-			{% endif %}
-			{% if jellyfin_container_gdm_bind_port_01 %}
-			-p {{ jellyfin_container_gdm_bind_port_01 }}:{{ jellyfin_container_gdm_port_01 }}/udp \
-			{% endif %}
-			{% if jellyfin_container_gdm_bind_port_02 %}
-			-p {{ jellyfin_container_gdm_bind_port_02 }}:{{ jellyfin_container_gdm_port_02 }}/udp \
-			{% endif %}
-			{% if jellyfin_container_gdm_bind_port_03 %}
-			-p {{ jellyfin_container_gdm_bind_port_03 }}:{{ jellyfin_container_gdm_port_03 }}/udp \
-			{% endif %}
-			{% if jellyfin_container_gdm_bind_port_04 %}
-			-p {{ jellyfin_container_gdm_bind_port_04 }}:{{ jellyfin_container_gdm_port_04 }}/udp \
+			{% if jellyfin_container_client_discover_bind_port %}
+			-p {{ jellyfin_container_client_discover_bind_port }}:{{ jellyfin_container_client_discover_port }}/udp \
 			{% endif %}
 			{% if jellyfin_gpu_bind_path %}
 			--device={{ jellyfin_gpu_path }}:{{ jellyfin_gpu_bind_path }} \

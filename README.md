@@ -13,7 +13,7 @@ For an Ansible playbook which integrates this role and makes it easier to use, s
 
 # Limitations
 
-This role configures Plex with security in mind by doing the following:
+This role configures Jellyfin with security in mind by doing the following:
 
 1. Running the container as a non-root user
 2. Making the filesystem read-only
