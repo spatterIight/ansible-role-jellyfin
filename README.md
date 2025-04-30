@@ -13,23 +13,14 @@ For an Ansible playbook which integrates this role and makes it easier to use, s
 
 # Limitations
 
-This role configures Jellyfin with security in mind by doing the following:
+Most LinuxServer docker images support non-root user operation and read-only capabilities. The Jellyfin image is not one of these. By default this role is configured to:
 
-1. Running the container as a non-root user
-2. Making the filesystem read-only
-3. Dropping most capabilities
+1. Run as root user
+2. Run the container as read/write (NOT read-only)
 
-Unfortunately, due to upstream requirements, some admissions had to be made:
-
-1. Several capabilities related to permissions are added to the container
+Additionally, like all LinuxServer docker images, full `cap-drop` is not supported, and several capabilities related to permissions are added to the container: 
    - SETUID
    - SETGID
    - CHOWN
    - FOWNER
    - DAC_OVERRIDE
-2. A `tmpfs` volume is mounted with `exec` permissions
-
-You can read more about these upstream requirements in the documentation:
-
-1. https://docs.linuxserver.io/misc/non-root/
-2. https://docs.linuxserver.io/misc/read-only/
