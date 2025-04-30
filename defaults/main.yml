@@ -6,8 +6,15 @@ jellyfin_enabled: true
 
 jellyfin_identifier: jellyfin
 
-jellyfin_uid: ''
-jellyfin_gid: ''
+# Controls what user the Jellyfin process is run as inside of the container
+# The UID and GID below of '0' indicates 'root'
+#
+# Since the LinuxServer Jellyfin image does not support non-root user operation, this is sadly necessary
+# If it did it would be documented in a section here:
+# https://docs.linuxserver.io/images/docker-jellyfin
+jellyfin_uid: '0'
+jellyfin_gid: '0'
+
 jellyfin_timezone: 'Etc/UTC'
 
 jellyfin_version: 10.10.7
@@ -21,21 +28,11 @@ jellyfin_published_server_url: "{{ jellyfin_hostname }}"
 # This value must either be `/` or not end with a slash (e.g. `/jellyfin`).
 jellyfin_path_prefix: /
 
-# Valid settings for 'jellyfin_version_environment_variable' are:
-#
-# 1. docker: Let Docker handle the Jellyfin Version, we keep our Dockerhub Endpoint up to date with the latest public builds.
-# 2. latest: will update jellyfin to the latest version available that you are entitled to.
-# 3. public: will update jellyfinpass users to the latest public version, useful for jellyfinpass users that don't want to be on the bleeding edge but still want the latest public updates.
-# 4. <specific-version>: will select a specific version (eg 0.9.12.4.1192-9a47d21) of jellyfin to install, note you cannot use this to access jellyfinpass versions if you do not have jellyfinpass.
-#
-# NOTE -> You cannot update to a JellyfinPass only (beta) version if you are not logged in with a JellyfinPass account
-# NOTE -> You must set 'jellyfin_container_read_only' to false if you set a value that is not 'docker'
-# https://github.com/linuxserver/docker-jellyfin#application-setup
-jellyfin_version_environment_variable: docker
-
 # Controls whether the container filesystem is read-only
-# To enable runtime update of Jellyfin (and thus Jellyfinpass builds) this value must be false
-jellyfin_container_read_only: true
+# Doesn't look like the LinuxServer Jellyfin image supports read only mode
+# If it did it would be documented in a section here:
+# https://docs.linuxserver.io/images/docker-jellyfin
+jellyfin_container_read_only: false
 
 # The path where the Intel/AMD GPU is on the host system
 # For NVIDIA GPUs see 'jellyfin_nvidia_visible_devices' and 'jellyfin_container_runtime'
@@ -45,13 +42,6 @@ jellyfin_gpu_path: "/dev/dri"
 # The path to mount the Intel/AMD GPU to in the container.
 # Takes a path value (e.g. "/dev/dri"), or empty string to not mount.
 jellyfin_gpu_bind_path: ""
-
-# Since the container is NOT run in 'host' networking mode
-# it is required that a claim token be provided during first time setup
-#
-# Link to obtain -> https://jellyfin.tv/claim
-# Keep in mind that the claim token expires after 4 minutes.
-jellyfin_claim_token: ""
 
 # The container runtime that the container engine should use
 # Should be set to 'nvidia' to enable NVIDIA GPU hardware acceleration,
@@ -66,6 +56,16 @@ jellyfin_container_runtime: ""
 #
 # https://docs.linuxserver.io/images/docker-jellyfin/#nvidia
 jellyfin_nvidia_visible_devices: ""
+
+# A string specifying LinuxServer docker mods to install
+# Example: jellyfin_docker_mods: "linuxserver/mods:jellyfin-opencl-intel|linuxserver/mods:jellyfin-mod2"
+#
+# To discover available mods, see the following link:
+# https://mods.linuxserver.io/?mod=jellyfin
+#
+# This may be especially useful if you are using an intel GPU
+# https://docs.linuxserver.io/images/docker-jellyfin/#intel
+jellyfin_docker_mods: ""
 
 jellyfin_base_path: "{{ jellyfin_identifier }}"
 jellyfin_data_path: "{{ jellyfin_base_path }}/data"
