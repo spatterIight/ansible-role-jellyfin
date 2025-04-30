@@ -1,0 +1,80 @@
+---
+
+- name: Ensure Jellyfin paths exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0750"
+    owner: "{{ jellyfin_uid }}"
+    group: "{{ jellyfin_gid }}"
+  with_items:
+    - "{{ jellyfin_base_path }}"
+    - "{{ jellyfin_data_path }}"
+
+- name: Ensure Jellyfin media path exists
+  ansible.builtin.file:
+    path: "{{ jellyfin_media_path }}"
+    state: directory
+    mode: "0750"
+    owner: "{{ jellyfin_uid }}"
+    group: "{{ jellyfin_gid }}"
+  when: jellyfin_media_bind_path
+
+- name: Ensure Jellyfin support files created
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/{{ item }}.j2"
+    dest: "{{ jellyfin_base_path }}/{{ item }}"
+    owner: "{{ jellyfin_uid }}"
+    group: "{{ jellyfin_gid }}"
+    mode: "0640"
+  with_items:
+    - env
+    - labels
+
+- name: Ensure Jellyfin container image is pulled via community.docker.docker_image
+  when: devture_systemd_docker_base_container_image_pull_method == 'ansible-module'
+  community.docker.docker_image:
+    name: "{{ jellyfin_container_image }}"
+    source: "{{ 'pull' if ansible_version.major > 2 or ansible_version.minor > 7 else omit }}"
+    force_source: "{{ syncthing_container_image_force_pull if ansible_version.major > 2 or ansible_version.minor >= 8 else omit }}"
+    force: "{{ omit if ansible_version.major > 2 or ansible_version.minor >= 8 else syncthing_container_image_force_pull }}"
+  register: image_pull_result
+  retries: "{{ devture_playbook_help_container_retries_count }}"
+  delay: "{{ devture_playbook_help_container_retries_delay }}"
+  until: image_pull_result is not failed
+
+- name: Ensure Jellyfin container image is pulled via command
+  when: devture_systemd_docker_base_container_image_pull_method == 'command'
+  ansible.builtin.command:
+    cmd: "{{ devture_systemd_docker_base_host_command_docker }} pull {{ jellyfin_container_image }}"
+  register: image_pull_result
+  retries: "{{ devture_playbook_help_container_retries_count }}"
+  delay: "{{ devture_playbook_help_container_retries_delay }}"
+  until: image_pull_result is not failed
+  changed_when: "'Downloaded newer image' in image_pull_result.stdout"
+
+- name: Ensure Jellyfin container network is created via community.docker.docker_network
+  when: devture_systemd_docker_base_container_network_creation_method == 'ansible-module'
+  community.general.docker_network:
+    enable_ipv6: "{{ devture_systemd_docker_base_ipv6_enabled }}"
+    name: "{{ jellyfin_container_network }}"
+    driver: bridge
+    driver_options: "{{ devture_systemd_docker_base_container_networks_driver_options }}"
+
+- name: Ensure Jellyfin container network is created via ansible.builtin.command
+  when: devture_systemd_docker_base_container_network_creation_method == 'command'
+  ansible.builtin.command:
+    cmd: >-
+      {{ devture_systemd_docker_base_host_command_docker }} network create
+      {% if devture_systemd_docker_base_ipv6_enabled %}--ipv6{% endif %}
+      {{ devture_systemd_docker_base_container_networks_driver_options_string }}
+      {{ jellyfin_container_network }}
+  register: network_creation_result
+  changed_when: network_creation_result.rc == 0
+  failed_when: network_creation_result.rc != 0 and 'already exists' not in network_creation_result.stderr
+
+- name: Ensure Jellyfin systemd installed
+  ansible.builtin.template:
+    src: "{{ role_path }}/templates/systemd/jellyfin.service.j2"
+    dest: "{{ devture_systemd_docker_base_systemd_path }}/{{ jellyfin_identifier }}.service"
+    mode: "0644"

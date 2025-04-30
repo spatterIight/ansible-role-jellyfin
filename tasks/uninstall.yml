@@ -1,0 +1,26 @@
+---
+
+- name: Check existence of Jellyfin systemd service
+  ansible.builtin.stat:
+    path: "{{ devture_systemd_docker_base_systemd_path }}/{{ jellyfin_identifier }}.service"
+  register: jellyfin_service_stat
+
+- name: Uninstall Jellyfin systemd services and files
+  when: jellyfin_service_stat.stat.exists | bool
+  block:
+    - name: Ensure Jellyfin systemd service is stopped
+      ansible.builtin.service:
+        name: "{{ jellyfin_identifier }}"
+        state: stopped
+        enabled: false
+        daemon_reload: true
+
+    - name: Ensure Jellyfin systemd service does not exist
+      ansible.builtin.file:
+        path: "{{ devture_systemd_docker_base_systemd_path }}/{{ jellyfin_identifier }}.service"
+        state: absent
+
+    - name: Ensure Jellyfin path doesn't exist
+      ansible.builtin.file:
+        path: "{{ jellyfin_base_path }}"
+        state: absent

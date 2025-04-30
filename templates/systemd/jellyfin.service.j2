@@ -1,0 +1,78 @@
+#jinja2: lstrip_blocks: "True"
+[Unit]
+Description=Jellyfin ({{ jellyfin_identifier }})
+{% for service in jellyfin_systemd_required_services_list %}
+Requires={{ service }}
+After={{ service }}
+{% endfor %}
+{% for service in jellyfin_systemd_wanted_services_list %}
+Wants={{ service }}
+{% endfor %}
+
+[Service]
+Type=simple
+Environment="HOME={{ devture_systemd_docker_base_systemd_unit_home_path }}"
+ExecStartPre=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} stop -t {{ jellyfin_container_stop_grace_time_seconds }} {{ jellyfin_identifier }} 2>/dev/null || true'
+ExecStartPre=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} rm {{ jellyfin_identifier }} 2>/dev/null || true'
+
+ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
+			--rm \
+			--name={{ jellyfin_identifier }} \
+			{% if jellyfin_container_runtime %}
+			--runtime={{ jellyfin_container_runtime }}
+			{% endif %}
+			--log-driver=none \
+			--user={{ jellyfin_uid }}:{{ jellyfin_gid }} \
+			--cap-drop=ALL \
+			--cap-add=SETUID \
+			--cap-add=SETGID \
+			--cap-add=CHOWN \
+			--cap-add=FOWNER \
+			--cap-add=DAC_OVERRIDE \
+			{% if jellyfin_container_read_only %}
+			--read-only \
+			{% endif %}
+			--network={{ jellyfin_container_network }} \
+			{% if jellyfin_container_http_bind_port %}
+			-p {{ jellyfin_container_http_bind_port }}:{{ jellyfin_container_http_port }} \
+			{% endif %}
+			{% if jellyfin_container_service_discover_bind_port %}
+			-p {{ jellyfin_container_service_discover_bind_port }}:{{ jellyfin_container_service_discover_port }}/udp \
+			{% endif %}
+			{% if jellyfin_container_client_discover_bind_port %}
+			-p {{ jellyfin_container_client_discover_bind_port }}:{{ jellyfin_container_client_discover_port }}/udp \
+			{% endif %}
+			{% if jellyfin_gpu_bind_path %}
+			--device={{ jellyfin_gpu_path }}:{{ jellyfin_gpu_bind_path }} \
+			{% endif %}
+			--env-file={{ jellyfin_base_path }}/env \
+			--label-file={{ jellyfin_base_path }}/labels \
+			--mount type=bind,src={{ jellyfin_data_path }},dst=/config \
+			{% if jellyfin_media_bind_path %}
+			--mount type=bind,src={{ jellyfin_media_path }},dst={{ jellyfin_media_bind_path }} \
+			{% endif %}
+			{% for volume in jellyfin_container_additional_volumes %}
+			--mount type={{ volume.type | default('bind' if '/' in volume.src else 'volume') }},src={{ volume.src }},dst={{ volume.dst }}{{ (',' + volume.options) if volume.options | default('') else '' }} \
+			{% endfor %}
+			# https://docs.linuxserver.io/misc/read-only/#how
+			--tmpfs=/run:rw,exec,nosuid,size=128m \
+			{% for arg in jellyfin_container_extra_arguments %}
+			{{ arg }} \
+			{% endfor %}
+			{{ jellyfin_container_image }}
+
+{% for network in jellyfin_container_additional_networks %}
+ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} network connect {{ network }} {{ jellyfin_identifier }}
+{% endfor %}
+
+ExecStart={{ devture_systemd_docker_base_host_command_docker }} start --attach {{ jellyfin_identifier }}
+
+ExecStop=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} stop --time={{ jellyfin_container_stop_grace_time_seconds }} {{ jellyfin_identifier }} 2>/dev/null || true'
+ExecStop=-{{ devture_systemd_docker_base_host_command_sh }} -c '{{ devture_systemd_docker_base_host_command_docker }} rm {{ jellyfin_identifier }} 2>/dev/null || true'
+
+Restart=always
+RestartSec=30
+SyslogIdentifier={{ jellyfin_identifier }}
+
+[Install]
+WantedBy=multi-user.target
