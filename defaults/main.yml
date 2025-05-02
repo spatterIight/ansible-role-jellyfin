@@ -22,7 +22,6 @@ jellyfin_arch: amd64
 
 # The hostname at which jellyfin is served.
 jellyfin_hostname: ''
-jellyfin_published_server_url: "{{ jellyfin_hostname }}"
 
 # The path at which jellyfin is served.
 # This value must either be `/` or not end with a slash (e.g. `/jellyfin`).
@@ -132,6 +131,9 @@ jellyfin_container_client_discover_port: 7359
 # Controls whether the container exposes the 7359 UDP port
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:7359"), or empty string to not expose.
 jellyfin_container_client_discover_bind_port: ""
+
+# The server address the client discovery service should respond with
+jellyfin_published_server_url: ""
 
 # To inject your own other container labels, see `jellyfin_container_labels_additional_labels`.
 jellyfin_container_labels_traefik_enabled: true
