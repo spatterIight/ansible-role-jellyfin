@@ -17,6 +17,7 @@ jellyfin_gid: '0'
 
 jellyfin_timezone: 'Etc/UTC'
 
+# renovate: datasource=docker depName=lscr.io/linuxserver/jellyfin versioning=semver
 jellyfin_version: 10.10.7
 jellyfin_arch: amd64
 
