@@ -16,5 +16,12 @@
         "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (?:lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[a-z-0-9]+?))?\\s+[A-Za-z0-9_]+?(?:_version|_tag)\\s*:\\s*[\"']?(?<currentValue>.+?)[\"']?\\s"
       ]
     }
+  ],
+  "packageRules": [
+    {
+      "description": "Ignore old date-based versioning scheme (YYYY.MM.DD format)",
+      "matchFileNames": ["/defaults/main.yml"],
+      "allowedVersions": "!/^20[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}$/"
+    }
   ]
 }
