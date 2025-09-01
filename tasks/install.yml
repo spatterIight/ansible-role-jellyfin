@@ -18,7 +18,7 @@
     mode: "0750"
     owner: "{{ jellyfin_uid }}"
     group: "{{ jellyfin_gid }}"
-  when: jellyfin_media_bind_path
+  when: jellyfin_media_bind_path != ""
 
 - name: Ensure Jellyfin support files created
   ansible.builtin.template:
