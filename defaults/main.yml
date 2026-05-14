@@ -89,9 +89,6 @@ jellyfin_container_image_registry_prefix: "{{ jellyfin_container_image_registry_
 jellyfin_container_image_registry_prefix_upstream: "{{ jellyfin_container_image_registry_prefix_upstream_default }}"
 jellyfin_container_image_registry_prefix_upstream_default: lscr.io/
 
-# The base container network. It will be auto-created by this role if it doesn't exist already.
-jellyfin_container_network: "{{ jellyfin_identifier }}"
-
 # A list of additional container networks that the container would be connected to.
 # The role does not create these networks, so make sure they already exist.
 jellyfin_container_additional_networks: "{{ (jellyfin_container_additional_networks_default + jellyfin_container_additional_networks_auto + jellyfin_container_additional_networks_custom) | unique }}"
@@ -110,6 +107,12 @@ jellyfin_systemd_wanted_services_list: "{{ (jellyfin_systemd_wanted_services_lis
 jellyfin_systemd_wanted_services_list_default: []
 jellyfin_systemd_wanted_services_list_auto: []
 jellyfin_systemd_wanted_services_list_custom: []
+
+# The base container network. It will be auto-created by this role if it doesn't exist already.
+jellyfin_container_network: "{{ jellyfin_identifier }}"
+
+# Control if the container network is deleted on uninstalling.
+jellyfin_container_network_deletion_enabled: true
 
 # For information on all the ports Jellyfin may use, and what they do, see the below docs
 # https://github.com/linuxserver/docker-jellyfin#optional-parameters
