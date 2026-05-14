@@ -21,15 +21,15 @@ jellyfin_identifier: jellyfin
 # Since the LinuxServer Jellyfin image does not support non-root user operation, this is sadly necessary
 # If it did it would be documented in a section here:
 # https://docs.linuxserver.io/images/docker-jellyfin
-jellyfin_uid: '0'
-jellyfin_gid: '0'
+jellyfin_uid: "0"
+jellyfin_gid: "0"
 
 # renovate: datasource=docker depName=lscr.io/linuxserver/jellyfin versioning=semver
 jellyfin_version: 10.11.8
 jellyfin_arch: amd64
 
 # The hostname at which jellyfin is served.
-jellyfin_hostname: ''
+jellyfin_hostname: ""
 
 # The path at which jellyfin is served.
 # This value must either be `/` or not end with a slash (e.g. `/jellyfin`).
@@ -156,7 +156,7 @@ jellyfin_container_labels_traefik_tls_certResolver: default  # noqa var-naming
 # jellyfin_container_labels_additional_labels: |
 #   my.label=1
 #   another.label="here"
-jellyfin_container_labels_additional_labels: ''
+jellyfin_container_labels_additional_labels: ""
 
 # A list of additional "volumes" to mount in the container.
 #
@@ -208,7 +208,7 @@ jellyfin_container_cleanup_command: |
   exit 1
 
 # Specify the timezone
-jellyfin_timezone: 'Etc/UTC'
+jellyfin_timezone: "Etc/UTC"
 
 # jellyfin_environment_variables_additional_variables contains a multiline string with additional environment variables to pass to the container.
 #
@@ -216,7 +216,7 @@ jellyfin_timezone: 'Etc/UTC'
 # jellyfin_environment_variables_additional_variables: |
 #   VAR=1
 #   ANOTHER=value
-jellyfin_environment_variables_additional_variables: ''
+jellyfin_environment_variables_additional_variables: ""
 
 # jellyfin_restart_necessary controls whether the Jellyfin systemd
 # service will be restarted (when true) or merely started (when false) by the
