@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2025 spatterIight
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Jellyfin Ansible role
 
 This is an [Ansible](https://www.ansible.com/) role which installs [Jellyfin](https://jellyfin.org/) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
