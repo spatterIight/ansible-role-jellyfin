@@ -14,6 +14,19 @@
 jellyfin_enabled: true
 
 jellyfin_identifier: jellyfin
+jellyfin_base_path: "/{{ jellyfin_identifier }}"
+jellyfin_data_path: "{{ jellyfin_base_path }}/data"
+
+# The path where media files are stored on the host system
+jellyfin_media_path: "{{ jellyfin_base_path }}/media"
+
+# The path at which jellyfin_media_path is mounted to inside the container
+# Takes a path value (e.g. "/media"), or empty string to not mount.
+jellyfin_media_bind_path: ""
+
+# renovate: datasource=docker depName=lscr.io/linuxserver/jellyfin versioning=semver
+jellyfin_version: 10.11.8
+jellyfin_arch: amd64
 
 # Controls what user the Jellyfin process is run as inside of the container
 # The UID and GID below of '0' indicates 'root'
@@ -23,10 +36,6 @@ jellyfin_identifier: jellyfin
 # https://docs.linuxserver.io/images/docker-jellyfin
 jellyfin_uid: "0"
 jellyfin_gid: "0"
-
-# renovate: datasource=docker depName=lscr.io/linuxserver/jellyfin versioning=semver
-jellyfin_version: 10.11.8
-jellyfin_arch: amd64
 
 # The hostname at which jellyfin is served.
 jellyfin_hostname: ""
@@ -73,16 +82,6 @@ jellyfin_nvidia_visible_devices: ""
 # This may be especially useful if you are using an intel GPU
 # https://docs.linuxserver.io/images/docker-jellyfin/#intel
 jellyfin_docker_mods: ""
-
-jellyfin_base_path: "{{ jellyfin_identifier }}"
-jellyfin_data_path: "{{ jellyfin_base_path }}/data"
-
-# The path where media files are stored on the host system
-jellyfin_media_path: "{{ jellyfin_base_path }}/media"
-
-# The path at which jellyfin_media_path is mounted to inside the container
-# Takes a path value (e.g. "/media"), or empty string to not mount.
-jellyfin_media_bind_path: ""
 
 jellyfin_container_image: "{{ jellyfin_container_image_registry_prefix }}linuxserver/jellyfin:{{ jellyfin_container_image_tag }}"
 jellyfin_container_image_tag: "{{ jellyfin_version }}"

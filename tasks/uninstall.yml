@@ -1,4 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2025 spatterIight
+# SPDX-FileCopyrightText: 2025, 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -23,7 +25,67 @@
         path: "{{ devture_systemd_docker_base_systemd_path }}/{{ jellyfin_identifier }}.service"
         state: absent
 
-    - name: Ensure Jellyfin path doesn't exist
+    - name: Ensure Jellyfin support files do not exist
       ansible.builtin.file:
-        path: "{{ jellyfin_base_path }}"
+        path: "{{ jellyfin_base_path }}/{{ item }}"
         state: absent
+      with_items:
+        - env
+        - labels
+
+    - name: Ensure Jellyfin local data path does not exist if empty
+      ansible.builtin.command:
+        cmd: "rmdir {{ jellyfin_data_path }}"
+      register: jellyfin_data_path_deletion_result
+      changed_when: jellyfin_data_path_deletion_result.rc == 0
+      failed_when: false
+
+    - name: Ensure Jellyfin local media path does not exist if empty
+      ansible.builtin.command:
+        cmd: "rmdir {{ jellyfin_media_path }}"
+      register: jellyfin_media_path_deletion_result
+      changed_when: jellyfin_media_path_deletion_result.rc == 0
+      failed_when: false
+
+    - name: Ensure Jellyfin base path does not exist if empty
+      ansible.builtin.command:
+        cmd: "rmdir {{ jellyfin_base_path }}"
+      register: jellyfin_base_path_deletion_result
+      changed_when: jellyfin_base_path_deletion_result.rc == 0
+      failed_when: false
+
+- name: Check existence of Jellyfin local data path
+  ansible.builtin.stat:
+    path: "{{ jellyfin_data_path }}"
+  register: jellyfin_data_path_stat
+
+# We just want to notify the user. Deleting data is too destructive.
+- name: Inject the message about the remaining Jellyfin local data path
+  when: jellyfin_data_path_stat.stat.exists | bool
+  ansible.builtin.set_fact:
+    devture_playbook_runtime_messages_list: |
+      {{
+        devture_playbook_runtime_messages_list | default([])
+        +
+        [
+          "Note: As the local Jellyfin instance has been removed, some old data remains in `" + jellyfin_data_path + "`. Feel free to delete it."
+        ]
+      }}
+
+- name: Check existence of Jellyfin local media path
+  ansible.builtin.stat:
+    path: "{{ jellyfin_media_path }}"
+  register: jellyfin_media_path_stat
+
+# We just want to notify the user. Deleting data is too destructive.
+- name: Inject the message about the remaining Jellyfin local media path
+  when: jellyfin_media_path_stat.stat.exists | bool
+  ansible.builtin.set_fact:
+    devture_playbook_runtime_messages_list: |
+      {{
+        devture_playbook_runtime_messages_list | default([])
+        +
+        [
+          "Note: As the local Jellyfin instance has been removed, media files remain in `" + jellyfin_media_path + "`. Feel free to delete it."
+        ]
+      }}
