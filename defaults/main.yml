@@ -98,11 +98,6 @@ jellyfin_container_additional_networks_default: []
 jellyfin_container_additional_networks_auto: []
 jellyfin_container_additional_networks_custom: []
 
-# Controls how long to wait for the container to stop gracefully before killing it.
-# Because `devture_systemd_docker_base_container_stop_grace_time_seconds` may be quite short and databases are more important to stop gracefully,
-# we default to at least 30 seconds.
-jellyfin_container_stop_grace_time_seconds: "{{ [devture_systemd_docker_base_container_stop_grace_time_seconds, 30] | max }}"
-
 # List of systemd services that the Jellyfin systemd service depends on
 jellyfin_systemd_required_services_list: "{{ (jellyfin_systemd_required_services_list_default + jellyfin_systemd_required_services_list_auto + jellyfin_systemd_required_services_list_custom) | unique }}"
 jellyfin_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
