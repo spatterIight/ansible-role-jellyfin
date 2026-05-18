@@ -1,25 +1,28 @@
----
+# SPDX-FileCopyrightText: 2023 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2025 spatterIight
+# SPDX-FileCopyrightText: 2025, 2026 Suguru Hirahara
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
 
-- name: Install Jellyfin
+---
+- name: Perform Jellyfin installation tasks
+  when: jellyfin_enabled | bool
   tags:
     - setup-all
     - setup-jellyfin
     - install-all
     - install-jellyfin
   block:
-    - name: Run Jellyfin validation tasks
-      when: jellyfin_enabled | bool
+    - name: Validate Jellyfin configuration
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/validate_config.yml"
-
-    - name: Run Jellyfin installation tasks
-      when: jellyfin_enabled | bool
+    - name: Install Jellyfin
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/install.yml"
 
-- name: Uninstall Jellyfin
+- name: Perform Jellyfin uninstallation tasks
+  when: not jellyfin_enabled | bool
   tags:
     - setup-all
     - setup-jellyfin
   block:
-    - name: Run Jellyfin uninstallation tasks
-      when: not jellyfin_enabled | bool
+    - name: Uninstall Jellyfin
       ansible.builtin.include_tasks: "{{ role_path }}/tasks/uninstall.yml"

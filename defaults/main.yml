@@ -1,3 +1,12 @@
+# SPDX-FileCopyrightText: 2023, 2024 Nikita Chernyi
+# SPDX-FileCopyrightText: 2023-2025 Slavi Pantaleev
+# SPDX-FileCopyrightText: 2024 Sergio Durigan Junior
+# SPDX-FileCopyrightText: 2025 MASH project contributors
+# SPDX-FileCopyrightText: 2025 spatterIight
+# SPDX-FileCopyrightText: 2025, 2026 Suguru Hirahara
+#
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 ---
 
 # Project source code URL: https://github.com/jellyfin/jellyfin
@@ -5,6 +14,19 @@
 jellyfin_enabled: true
 
 jellyfin_identifier: jellyfin
+jellyfin_base_path: "/{{ jellyfin_identifier }}"
+jellyfin_data_path: "{{ jellyfin_base_path }}/data"
+
+# The path where media files are stored on the host system
+jellyfin_media_path: "{{ jellyfin_base_path }}/media"
+
+# The path at which jellyfin_media_path is mounted to inside the container
+# Takes a path value (e.g. "/media"), or empty string to not mount.
+jellyfin_media_bind_path: ""
+
+# renovate: datasource=docker depName=lscr.io/linuxserver/jellyfin versioning=semver
+jellyfin_version: 10.11.8
+jellyfin_arch: amd64
 
 # Controls what user the Jellyfin process is run as inside of the container
 # The UID and GID below of '0' indicates 'root'
@@ -12,17 +34,11 @@ jellyfin_identifier: jellyfin
 # Since the LinuxServer Jellyfin image does not support non-root user operation, this is sadly necessary
 # If it did it would be documented in a section here:
 # https://docs.linuxserver.io/images/docker-jellyfin
-jellyfin_uid: '0'
-jellyfin_gid: '0'
-
-jellyfin_timezone: 'Etc/UTC'
-
-# renovate: datasource=docker depName=lscr.io/linuxserver/jellyfin versioning=semver
-jellyfin_version: 10.11.8
-jellyfin_arch: amd64
+jellyfin_uid: "0"
+jellyfin_gid: "0"
 
 # The hostname at which jellyfin is served.
-jellyfin_hostname: ''
+jellyfin_hostname: ""
 
 # The path at which jellyfin is served.
 # This value must either be `/` or not end with a slash (e.g. `/jellyfin`).
@@ -67,22 +83,11 @@ jellyfin_nvidia_visible_devices: ""
 # https://docs.linuxserver.io/images/docker-jellyfin/#intel
 jellyfin_docker_mods: ""
 
-jellyfin_base_path: "{{ jellyfin_identifier }}"
-jellyfin_data_path: "{{ jellyfin_base_path }}/data"
-
-# The path where media files are stored on the host system
-jellyfin_media_path: "{{ jellyfin_base_path }}/media"
-
-# The path at which jellyfin_media_path is mounted to inside the container
-# Takes a path value (e.g. "/media"), or empty string to not mount.
-jellyfin_media_bind_path: ""
-
 jellyfin_container_image: "{{ jellyfin_container_image_registry_prefix }}linuxserver/jellyfin:{{ jellyfin_container_image_tag }}"
 jellyfin_container_image_tag: "{{ jellyfin_version }}"
-jellyfin_container_image_registry_prefix: lscr.io/
-
-# The base container network. It will be auto-created by this role if it doesn't exist already.
-jellyfin_container_network: "{{ jellyfin_identifier }}"
+jellyfin_container_image_registry_prefix: "{{ jellyfin_container_image_registry_prefix_upstream }}"
+jellyfin_container_image_registry_prefix_upstream: "{{ jellyfin_container_image_registry_prefix_upstream_default }}"
+jellyfin_container_image_registry_prefix_upstream_default: lscr.io/
 
 # A list of additional container networks that the container would be connected to.
 # The role does not create these networks, so make sure they already exist.
@@ -90,11 +95,6 @@ jellyfin_container_additional_networks: "{{ (jellyfin_container_additional_netwo
 jellyfin_container_additional_networks_default: []
 jellyfin_container_additional_networks_auto: []
 jellyfin_container_additional_networks_custom: []
-
-# Controls how long to wait for the container to stop gracefully before killing it.
-# Because `devture_systemd_docker_base_container_stop_grace_time_seconds` may be quite short and databases are more important to stop gracefully,
-# we default to at least 30 seconds.
-jellyfin_container_stop_grace_time_seconds: "{{ [devture_systemd_docker_base_container_stop_grace_time_seconds, 30] | max }}"
 
 # List of systemd services that the Jellyfin systemd service depends on
 jellyfin_systemd_required_services_list: "{{ (jellyfin_systemd_required_services_list_default + jellyfin_systemd_required_services_list_auto + jellyfin_systemd_required_services_list_custom) | unique }}"
@@ -107,6 +107,12 @@ jellyfin_systemd_wanted_services_list: "{{ (jellyfin_systemd_wanted_services_lis
 jellyfin_systemd_wanted_services_list_default: []
 jellyfin_systemd_wanted_services_list_auto: []
 jellyfin_systemd_wanted_services_list_custom: []
+
+# The base container network. It will be auto-created by this role if it doesn't exist already.
+jellyfin_container_network: "{{ jellyfin_identifier }}"
+
+# Control if the container network is deleted on uninstalling.
+jellyfin_container_network_deletion_enabled: true
 
 # For information on all the ports Jellyfin may use, and what they do, see the below docs
 # https://github.com/linuxserver/docker-jellyfin#optional-parameters
@@ -154,15 +160,7 @@ jellyfin_container_labels_traefik_tls_certResolver: default  # noqa var-naming
 # jellyfin_container_labels_additional_labels: |
 #   my.label=1
 #   another.label="here"
-jellyfin_container_labels_additional_labels: ''
-
-# jellyfin_container_additional_environment_variables contains a multiline string with additional environment variables to pass to the container.
-#
-# Example:
-# jellyfin_container_additional_environment_variables: |
-#   VAR=1
-#   ANOTHER=value
-jellyfin_container_additional_environment_variables: ''
+jellyfin_container_labels_additional_labels: ""
 
 # A list of additional "volumes" to mount in the container.
 #
@@ -181,3 +179,55 @@ jellyfin_container_additional_volumes: []
 
 # A list of extra arguments to pass to the container
 jellyfin_container_extra_arguments: []
+
+# Controls how long to wait for the container to stop gracefully before killing it.
+jellyfin_container_stop_grace_time_seconds: "{{ devture_systemd_docker_base_container_stop_grace_time_seconds }}"
+
+# Controls how long the pre-start cleanup should wait for stale container-name release
+# before failing startup explicitly.
+jellyfin_container_cleanup_timeout_seconds: "{{ devture_systemd_docker_base_container_cleanup_timeout_seconds }}"
+
+# Controls the delay between pre-start cleanup retries.
+jellyfin_container_cleanup_retry_delay_seconds: "{{ devture_systemd_docker_base_container_cleanup_retry_delay_seconds }}"
+
+# Shell command used in the systemd pre-start phase to deterministically remove a stale
+# container and wait until Docker releases its name.
+jellyfin_container_cleanup_command: |
+  i=0;
+  while [ "$i" -lt {{ jellyfin_container_cleanup_timeout_seconds }} ]; do
+  {{ devture_systemd_docker_base_host_command_docker }} stop -t {{ jellyfin_container_stop_grace_time_seconds }} {{ jellyfin_identifier }} >/dev/null 2>&1 || true;
+  {{ devture_systemd_docker_base_host_command_docker }} rm -f {{ jellyfin_identifier }} >/dev/null 2>&1 || true;
+  if {{ devture_systemd_docker_base_host_command_docker }} container inspect {{ jellyfin_identifier }} >/dev/null 2>&1; then
+  i=$((i + 1));
+  sleep {{ jellyfin_container_cleanup_retry_delay_seconds }};
+  continue;
+  fi;
+  if {{ devture_systemd_docker_base_host_command_docker }} info >/dev/null 2>&1; then
+  exit 0;
+  fi;
+  echo "Failed to query Docker daemon while cleaning up {{ jellyfin_identifier }}" >&2;
+  exit 1;
+  done;
+  echo "Failed to remove stale container {{ jellyfin_identifier }} after {{ jellyfin_container_cleanup_timeout_seconds }} attempts" >&2;
+  exit 1
+
+# Specify the timezone
+jellyfin_timezone: "Etc/UTC"
+
+# jellyfin_environment_variables_additional_variables contains a multiline string with additional environment variables to pass to the container.
+#
+# Example:
+# jellyfin_environment_variables_additional_variables: |
+#   VAR=1
+#   ANOTHER=value
+jellyfin_environment_variables_additional_variables: ""
+
+# jellyfin_restart_necessary controls whether the Jellyfin systemd
+# service will be restarted (when true) or merely started (when false) by the
+# systemd service manager role (when conditional restart is enabled).
+#
+# This value is automatically computed during installation based on whether
+# any configuration files, the systemd service file, or the container image changed.
+# The default of `false` means "no restart needed" — appropriate when the role's
+# installation tasks haven't run (e.g., due to --tags skipping them).
+jellyfin_restart_necessary: false
