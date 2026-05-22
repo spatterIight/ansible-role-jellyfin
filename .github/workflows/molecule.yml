@@ -5,7 +5,7 @@ on: [push, pull_request]  # yamllint disable-line rule:truthy
 
 jobs:
   molecule:
-    name: molecule [${{ matrix.distro }}] [${{ matrix.scenario }}]
+    name: Molecule [${{ matrix.distro }}] [${{ matrix.scenario }}]
     runs-on: ubuntu-latest
 
     strategy:
@@ -53,6 +53,6 @@ jobs:
         working-directory: jellyfin
         run: ansible-galaxy collection install -r molecule/default/requirements.yml
 
-      - name: Run molecule
+      - name: Run Molecule
         working-directory: jellyfin
         run: molecule test --scenario-name ${{ matrix.scenario }}

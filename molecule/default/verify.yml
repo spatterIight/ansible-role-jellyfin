@@ -8,7 +8,7 @@
   become: true
   gather_facts: false
   tasks:
-    - name: Wait for jellyfin service to become active (up to 180s)
+    - name: Wait for Jellyfin service to become active (up to 180s)
       ansible.builtin.systemd:
         name: jellyfin.service
       register: svc
@@ -16,13 +16,13 @@
       retries: 36
       delay: 5
 
-    - name: Assert jellyfin service is active
+    - name: Assert Jellyfin service is active
       ansible.builtin.assert:
         that: svc.status.ActiveState == 'active'
         fail_msg: "jellyfin.service not active ({{ svc.status.ActiveState }})"
         success_msg: "jellyfin.service is active"
 
-    - name: Wait for jellyfin HTTP endpoint to respond (up to 10m)
+    - name: Wait for Jellyfin HTTP endpoint to respond (up to 10m)
       ansible.builtin.uri:
         url: "http://localhost:8096/"
         method: GET
@@ -33,7 +33,7 @@
       retries: 120
       delay: 5
 
-    - name: Assert jellyfin HTTP endpoint responds
+    - name: Assert Jellyfin HTTP endpoint responds
       ansible.builtin.assert:
         that: ep.status in [200, 302]
         fail_msg: "jellyfin did not respond as expected ({{ ep.status | default('no response') }})"

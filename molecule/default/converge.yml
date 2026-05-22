@@ -19,7 +19,7 @@
       loop_control:
         loop_var: role_name
 
-- name: Ensure jellyfin service is started
+- name: Ensure Jellyfin service is started
   hosts: all
   become: true
   gather_facts: false
