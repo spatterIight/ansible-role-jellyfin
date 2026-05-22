@@ -37,10 +37,10 @@ jellyfin_arch: amd64
 jellyfin_uid: "0"
 jellyfin_gid: "0"
 
-# The hostname at which jellyfin is served.
+# The hostname at which Jellyfin is served.
 jellyfin_hostname: ""
 
-# The path at which jellyfin is served.
+# The path at which Jellyfin is served.
 # This value must either be `/` or not end with a slash (e.g. `/jellyfin`).
 jellyfin_path_prefix: /
 

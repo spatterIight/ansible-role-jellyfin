@@ -36,6 +36,8 @@ Additionally, like all LinuxServer docker images, full `cap-drop` is not support
 
 ## Development
 
+### pre-commit
+
 You can optionally install a Git pre-commit hook (via [mise](https://mise.jdx.dev/) + [prek](https://prek.j178.dev/)) that runs formatting and linting checks before each commit. See [`.pre-commit-config.yaml`](./.pre-commit-config.yaml) for which hooks are to be executed.
 
 To install the hook, run the [`just`](https://github.com/casey/just) command below:
@@ -43,3 +45,9 @@ To install the hook, run the [`just`](https://github.com/casey/just) command bel
 ```sh
 just prek-install-git-pre-commit-hook
 ```
+
+### Molecule
+
+This role supports [Molecule](https://docs.ansible.com/projects/molecule/), an Ansible testing framework designed for developing and testing Ansible collections, playbooks, and roles.
+
+Refer to [this page](./molecule/README.md) for details about how to utilize it.
