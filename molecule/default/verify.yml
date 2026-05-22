@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-- name: Verify
+- name: Verify Jellyfin systemd service
   hosts: all
   become: true
   gather_facts: false
@@ -11,15 +11,15 @@
     - name: Wait for Jellyfin service to become active (up to 180s)
       ansible.builtin.systemd:
         name: jellyfin.service
-      register: svc
-      until: svc.status.ActiveState == 'active'
+      register: jellyfin_service
+      until: jellyfin_service.status.ActiveState == 'active'
       retries: 36
       delay: 5
 
     - name: Assert Jellyfin service is active
       ansible.builtin.assert:
-        that: svc.status.ActiveState == 'active'
-        fail_msg: "jellyfin.service not active ({{ svc.status.ActiveState }})"
+        that: jellyfin_service.status.ActiveState == 'active'
+        fail_msg: "jellyfin.service not active ({{ jellyfin_service.status.ActiveState }})"
         success_msg: "jellyfin.service is active"
 
     - name: Wait for Jellyfin HTTP endpoint to respond (up to 10m)
@@ -28,19 +28,19 @@
         method: GET
         status_code: [200, 302]
         follow_redirects: none
-      register: ep
-      until: ep.status in [200, 302]
+      register: jellyfin_endpoint
+      until: jellyfin_endpoint.status in [200, 302]
       retries: 120
       delay: 5
 
     - name: Assert Jellyfin HTTP endpoint responds
       ansible.builtin.assert:
-        that: ep.status in [200, 302]
-        fail_msg: "jellyfin did not respond as expected ({{ ep.status | default('no response') }})"
-        success_msg: "jellyfin responded with {{ ep.status }}"
+        that: jellyfin_endpoint.status in [200, 302]
+        fail_msg: "Jellyfin did not respond as expected ({{ jellyfin_endpoint.status | default('no response') }})"
+        success_msg: "Jellyfin responded with {{ jellyfin_endpoint.status }}"
 
-    - name: Show service status summary
+    - name: Show Jellyfin systemd service status summary
       ansible.builtin.debug:
         msg:
-          - "jellyfin systemd: {{ svc.status.ActiveState }}"
-          - "jellyfin HTTP: {{ ep.status }}"
+          - "Jellyfin systemd: {{ jellyfin_service.status.ActiveState }}"
+          - "Jellyfin HTTP: {{ jellyfin_endpoint.status }}"
