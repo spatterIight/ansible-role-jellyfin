@@ -25,7 +25,7 @@ jellyfin_media_path: "{{ jellyfin_base_path }}/media"
 jellyfin_media_bind_path: ""
 
 # renovate: datasource=docker depName=lscr.io/linuxserver/jellyfin versioning=semver
-jellyfin_version: 10.11.10
+jellyfin_version: 10.11.11
 jellyfin_arch: amd64
 
 # Controls what user the Jellyfin process is run as inside of the container
