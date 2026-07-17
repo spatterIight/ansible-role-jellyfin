@@ -28,6 +28,10 @@ provisioner:
   inventory:
     group_vars:
       all:
+        # Helper variables
+        jellyfin_debug_service_enabled: false
+
+        # Variables for Jellyfin
         jellyfin_hostname: jellyfin
         jellyfin_container_labels_traefik_enabled: false
         jellyfin_container_http_bind_port: 8096

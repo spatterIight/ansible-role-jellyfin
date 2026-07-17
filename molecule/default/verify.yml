@@ -22,6 +22,12 @@
         fail_msg: "jellyfin.service not active ({{ jellyfin_service.status.ActiveState }})"
         success_msg: "jellyfin.service is active"
 
+    - name: Retrieve Jellyfin service log for debugging
+      when: jellyfin_debug_service_enabled | bool
+      ansible.builtin.command:
+        cmd: journalctl -xeu jellyfin.service
+      changed_when: false
+
     - name: Wait for Jellyfin HTTP endpoint to respond (up to 10m)
       ansible.builtin.uri:
         url: "http://localhost:8096/"
