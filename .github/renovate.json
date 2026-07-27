@@ -14,6 +14,7 @@
         ".github/workflows/molecule.yml",
         ".github/workflows/pre-commit.yml",
         ".pre-commit-config.yaml",
+        ".python-version",
         "mise.toml",
         "molecule/requirements.txt"
       ],
@@ -29,7 +30,9 @@
       ],
       "enabled": true,
       "automerge": true,
-      "automergeType": "branch"
+      "automergeType": "branch",
+      "ignoreUnstable": false,
+      "versioning": "loose"
     },
     {
       "description": "Ignore old date-based versioning scheme (YYYY.MM.DD format)",
