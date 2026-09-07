@@ -66,20 +66,31 @@
     # ------------------------------------------------------------------
     # The systemd unit
     # ------------------------------------------------------------------
-    - name: Wait for the Jellyfin service to become active
+    - name: Wait for the Jellyfin systemd service to become active (up to 180s)
       ansible.builtin.systemd_service:
         name: jellyfin.service
       register: jellyfin_service
       until: jellyfin_service.status.ActiveState == 'active'
       retries: 36
       delay: 5
+      # So that giving up is reported by the assertion below rather than as a
+      # wall of systemd unit properties.
       failed_when: false
 
-    - name: Assert the Jellyfin service is active
+    # `Restart=always` in the systemd unit means that even a container which crashes
+    # and gets restarted reads as active here, so this is a precondition rather than
+    # a result.
+    - name: Assert the Jellyfin systemd service is active
       ansible.builtin.assert:
         that: jellyfin_service.status.ActiveState == 'active'
-        fail_msg: "jellyfin.service is {{ jellyfin_service.status.ActiveState }}, not active"
+        fail_msg: "jellyfin.service is not active ({{ jellyfin_service.status.ActiveState }})"
         success_msg: "jellyfin.service is active"
+
+    - name: Retrieve the Jellyfin systemd service log for debugging
+      when: jellyfin_debug_service_enabled | bool
+      ansible.builtin.command:
+        cmd: journalctl -xeu jellyfin.service
+      changed_when: false
 
     # `Restart=always` keeps a crash-looping unit reported as active, so being
     # active is worth very little on its own. A unit that has been restarted at
