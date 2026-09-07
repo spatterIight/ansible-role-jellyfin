@@ -592,7 +592,7 @@
       ansible.builtin.debug:
         msg:
           - "Jellyfin systemd: {{ jellyfin_service.status.ActiveState }} ({{ jellyfin_service.status.NRestarts }} restarts)"
-          - "Jellyfin version: {{ jellyfin_public_info.json.Version }} (role pins {{ jellyfin_defaults.jellyfin_version }})"
+          - "Jellyfin version: {{ jellyfin_public_info.json.Version }}"
           - "Jellyfin image: {{ jellyfin_container_definition.Config.Image }}"
           - "Jellyfin published server URL: {{ jellyfin_public_info.json.LocalAddress }}"
           - "Jellyfin timezone offset: {{ jellyfin_container_timezone.stdout | trim }}"
