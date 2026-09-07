@@ -154,15 +154,11 @@
 
     - name: Assert the running Jellyfin is the version this role installs
       ansible.builtin.assert:
-        that: jellyfin_public_info.json.Version == jellyfin_defaults.jellyfin_version
+        that:
+          - jellyfin_public_info.json.Version == jellyfin_defaults.jellyfin_version
+          - jellyfin_container_definition.Config.Image is search(':' ~ jellyfin_defaults.jellyfin_version ~ '$')
         fail_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
         success_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version }}"
-
-    - name: Assert the running Jellyfin is the version this role installs
-      ansible.builtin.assert:
-        that: jellyfin_container_definition.Config.Image is search(':' ~ jellyfin_defaults.jellyfin_version ~ '$')
-        fail_msg: "Jellyfin reports {{ jellyfin_container_definition.Config.Image | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
-        success_msg: "Jellyfin reports {{ jellyfin_container_definition.Config.Image }}"
 
     # `JELLYFIN_PublishedServerUrl` has exactly one way into the process: the
     # environment file the role renders from templates/env.j2. An unconfigured
