@@ -89,7 +89,7 @@
     - name: Retrieve the Jellyfin systemd service log for debugging
       when: jellyfin_debug_service_enabled | bool
       ansible.builtin.command:
-        cmd: journalctl -xeu jellyfin.service
+        cmd: journalctl --no-pager --output=cat --unit=jellyfin.service
       changed_when: false
 
     # `Restart=always` keeps a crash-looping unit reported as active, so being
