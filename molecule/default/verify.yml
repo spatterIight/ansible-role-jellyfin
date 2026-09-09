@@ -24,580 +24,580 @@
   tasks:
     - name: Verify that Jellyfin works
       block:
-    # The role is not included in this playbook, so its defaults are not in
-    # scope. Reading defaults/main.yml directly ties the version assertion
-    # below.
-    - name: Load the role defaults
-      ansible.builtin.include_vars:
-        file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
-        name: jellyfin_defaults
+        # The role is not included in this playbook, so its defaults are not in
+        # scope. Reading defaults/main.yml directly ties the version assertion
+        # below.
+        - name: Load the role defaults
+          ansible.builtin.include_vars:
+            file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
+            name: jellyfin_defaults
 
-    - name: Read the Jellyfin container definition
-      ansible.builtin.command:
-        cmd: "docker container inspect {{ jellyfin_molecule_container }}"
-      register: jellyfin_container_raw
-      changed_when: false
+        - name: Read the Jellyfin container definition
+          ansible.builtin.command:
+            cmd: "docker container inspect {{ jellyfin_molecule_container }}"
+          register: jellyfin_container_raw
+          changed_when: false
 
-    - name: Parse the Jellyfin container definition
-      ansible.builtin.set_fact:
-        jellyfin_container_definition: "{{ (jellyfin_container_raw.stdout | from_json)[0] }}"
+        - name: Parse the Jellyfin container definition
+          ansible.builtin.set_fact:
+            jellyfin_container_definition: "{{ (jellyfin_container_raw.stdout | from_json)[0] }}"
 
-    # ------------------------------------------------------------------
-    # The negative control, started first so that it is ready by the time the
-    # checks below get to it. Same image, none of the role: no environment file,
-    # no labels, no bind mounts. Every claim made about the role's instance is
-    # put to this one as well.
-    # ------------------------------------------------------------------
-    - name: Ensure a stale Jellyfin negative control container is gone
-      ansible.builtin.command:
-        cmd: "docker rm -f {{ jellyfin_molecule_control_container }}"
-      register: jellyfin_control_removal
-      changed_when: jellyfin_control_removal.rc == 0
-      failed_when: false
+        # ------------------------------------------------------------------
+        # The negative control, started first so that it is ready by the time the
+        # checks below get to it. Same image, none of the role: no environment file,
+        # no labels, no bind mounts. Every claim made about the role's instance is
+        # put to this one as well.
+        # ------------------------------------------------------------------
+        - name: Ensure a stale Jellyfin negative control container is gone
+          ansible.builtin.command:
+            cmd: "docker rm -f {{ jellyfin_molecule_control_container }}"
+          register: jellyfin_control_removal
+          changed_when: jellyfin_control_removal.rc == 0
+          failed_when: false
 
-    - name: Start an unconfigured Jellyfin as the negative control
-      ansible.builtin.command:
-        cmd: >-
-          docker run -d
-          --name {{ jellyfin_molecule_control_container }}
-          --network {{ jellyfin_molecule_network }}
-          -p 127.0.0.1:{{ jellyfin_molecule_control_bind_port }}:8096
-          {{ jellyfin_container_definition.Config.Image }}
-      changed_when: true
+        - name: Start an unconfigured Jellyfin as the negative control
+          ansible.builtin.command:
+            cmd: >-
+              docker run -d
+              --name {{ jellyfin_molecule_control_container }}
+              --network {{ jellyfin_molecule_network }}
+              -p 127.0.0.1:{{ jellyfin_molecule_control_bind_port }}:8096
+              {{ jellyfin_container_definition.Config.Image }}
+          changed_when: true
 
-    # ------------------------------------------------------------------
-    # The systemd unit
-    # ------------------------------------------------------------------
-    - name: Wait for the Jellyfin systemd service to become active (up to 180s)
-      ansible.builtin.systemd_service:
-        name: jellyfin.service
-      register: jellyfin_service
-      until: jellyfin_service.status.ActiveState == 'active'
-      retries: 36
-      delay: 5
-      # So that giving up is reported by the assertion below rather than as a
-      # wall of systemd unit properties.
-      failed_when: false
+        # ------------------------------------------------------------------
+        # The systemd unit
+        # ------------------------------------------------------------------
+        - name: Wait for the Jellyfin systemd service to become active (up to 180s)
+          ansible.builtin.systemd_service:
+            name: jellyfin.service
+          register: jellyfin_service
+          until: jellyfin_service.status.ActiveState == 'active'
+          retries: 36
+          delay: 5
+          # So that giving up is reported by the assertion below rather than as a
+          # wall of systemd unit properties.
+          failed_when: false
 
-    # `Restart=always` in the systemd unit means that even a container which crashes
-    # and gets restarted reads as active here, so this is a precondition rather than
-    # a result.
-    - name: Assert the Jellyfin systemd service is active
-      ansible.builtin.assert:
-        that: jellyfin_service.status.ActiveState == 'active'
-        fail_msg: "jellyfin.service is not active ({{ jellyfin_service.status.ActiveState }})"
-        success_msg: "jellyfin.service is active"
+        # `Restart=always` in the systemd unit means that even a container which crashes
+        # and gets restarted reads as active here, so this is a precondition rather than
+        # a result.
+        - name: Assert the Jellyfin systemd service is active
+          ansible.builtin.assert:
+            that: jellyfin_service.status.ActiveState == 'active'
+            fail_msg: "jellyfin.service is not active ({{ jellyfin_service.status.ActiveState }})"
+            success_msg: "jellyfin.service is active"
 
-    - name: Retrieve the Jellyfin systemd service log for debugging
-      when: jellyfin_debug_service_enabled | bool
-      ansible.builtin.command:
-        cmd: journalctl --no-pager --output=cat --unit=jellyfin.service
-      changed_when: false
+        - name: Retrieve the Jellyfin systemd service log for debugging
+          when: jellyfin_debug_service_enabled | bool
+          ansible.builtin.command:
+            cmd: journalctl --no-pager --output=cat --unit=jellyfin.service
+          changed_when: false
 
-    # `Restart=always` keeps a crash-looping unit reported as active, so being
-    # active is worth very little on its own. A unit that has been restarted at
-    # all is one that fell over at least once.
-    - name: Assert the Jellyfin service has not been restarted
-      ansible.builtin.assert:
-        that: jellyfin_service.status.NRestarts | int == 0
-        fail_msg: "jellyfin.service has restarted {{ jellyfin_service.status.NRestarts }} time(s); it is looping, not running"
-        success_msg: "jellyfin.service has not restarted"
+        # `Restart=always` keeps a crash-looping unit reported as active, so being
+        # active is worth very little on its own. A unit that has been restarted at
+        # all is one that fell over at least once.
+        - name: Assert the Jellyfin service has not been restarted
+          ansible.builtin.assert:
+            that: jellyfin_service.status.NRestarts | int == 0
+            fail_msg: "jellyfin.service has restarted {{ jellyfin_service.status.NRestarts }} time(s); it is looping, not running"
+            success_msg: "jellyfin.service has not restarted"
 
-    # ------------------------------------------------------------------
-    # The HTTP surface
-    #
-    # While Jellyfin is still coming up it answers every path with a 503 and an
-    # HTML splash page, so a 200 from the API is a real gate rather than a web
-    # shell that renders regardless.
-    # ------------------------------------------------------------------
-    - name: Wait for the Jellyfin public system information endpoint
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/System/Info/Public"
-        method: GET
-        status_code: [200, 503]
-      register: jellyfin_public_info
-      until: jellyfin_public_info.status == 200
-      retries: 60
-      delay: 5
-      failed_when: false
+        # ------------------------------------------------------------------
+        # The HTTP surface
+        #
+        # While Jellyfin is still coming up it answers every path with a 503 and an
+        # HTML splash page, so a 200 from the API is a real gate rather than a web
+        # shell that renders regardless.
+        # ------------------------------------------------------------------
+        - name: Wait for the Jellyfin public system information endpoint
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/System/Info/Public"
+            method: GET
+            status_code: [200, 503]
+          register: jellyfin_public_info
+          until: jellyfin_public_info.status == 200
+          retries: 60
+          delay: 5
+          failed_when: false
 
-    - name: Assert the Jellyfin public system information endpoint responds
-      ansible.builtin.assert:
-        that: jellyfin_public_info.status == 200
-        fail_msg: "/System/Info/Public answered {{ jellyfin_public_info.status | default('none') }}"
-        success_msg: "/System/Info/Public answered 200"
+        - name: Assert the Jellyfin public system information endpoint responds
+          ansible.builtin.assert:
+            that: jellyfin_public_info.status == 200
+            fail_msg: "/System/Info/Public answered {{ jellyfin_public_info.status | default('none') }}"
+            success_msg: "/System/Info/Public answered 200"
 
-    # The unit runs `docker start --attach`, so the container's own output reaches
-    # the journal even though it is created with `--log-driver=none` - which does
-    # make `docker logs` unreadable. Scoped to the current invocation, so that an
-    # earlier start still in the journal cannot satisfy this.
-    - name: Read the journal of the current Jellyfin invocation
-      ansible.builtin.command:
-        cmd: "journalctl _SYSTEMD_INVOCATION_ID={{ jellyfin_service.status.InvocationID }} --no-pager"
-      register: jellyfin_journal
-      # journald lags the HTTP endpoint by a moment, so this is polled rather
-      # than read once.
-      until: "'Startup complete' in jellyfin_journal.stdout"
-      retries: 30
-      delay: 2
-      changed_when: false
-      failed_when: false
+        # The unit runs `docker start --attach`, so the container's own output reaches
+        # the journal even though it is created with `--log-driver=none` - which does
+        # make `docker logs` unreadable. Scoped to the current invocation, so that an
+        # earlier start still in the journal cannot satisfy this.
+        - name: Read the journal of the current Jellyfin invocation
+          ansible.builtin.command:
+            cmd: "journalctl _SYSTEMD_INVOCATION_ID={{ jellyfin_service.status.InvocationID }} --no-pager"
+          register: jellyfin_journal
+          # journald lags the HTTP endpoint by a moment, so this is polled rather
+          # than read once.
+          until: "'Startup complete' in jellyfin_journal.stdout"
+          retries: 30
+          delay: 2
+          changed_when: false
+          failed_when: false
 
-    - name: Retrieve the Jellyfin service log for debugging
-      when: jellyfin_debug_service_enabled | bool
-      ansible.builtin.debug:
-        var: jellyfin_journal.stdout_lines
+        - name: Retrieve the Jellyfin service log for debugging
+          when: jellyfin_debug_service_enabled | bool
+          ansible.builtin.debug:
+            var: jellyfin_journal.stdout_lines
 
-    - name: Assert the current Jellyfin invocation reached startup completion
-      ansible.builtin.assert:
-        that: "'Startup complete' in jellyfin_journal.stdout"
-        fail_msg: "The journal of the current jellyfin.service invocation never reported 'Startup complete'"
-        success_msg: "Jellyfin logged startup completion in the current invocation"
+        - name: Assert the current Jellyfin invocation reached startup completion
+          ansible.builtin.assert:
+            that: "'Startup complete' in jellyfin_journal.stdout"
+            fail_msg: "The journal of the current jellyfin.service invocation never reported 'Startup complete'"
+            success_msg: "Jellyfin logged startup completion in the current invocation"
 
-    - name: Assert the running Jellyfin is the version this role installs
-      ansible.builtin.assert:
-        that:
-          - jellyfin_public_info.json.Version == jellyfin_defaults.jellyfin_version
-          - jellyfin_container_definition.Config.Image is search(':' ~ jellyfin_defaults.jellyfin_version ~ '$')
-        fail_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
-        success_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version }}"
+        - name: Assert the running Jellyfin is the version this role installs
+          ansible.builtin.assert:
+            that:
+              - jellyfin_public_info.json.Version == jellyfin_defaults.jellyfin_version
+              - jellyfin_container_definition.Config.Image is search(':' ~ jellyfin_defaults.jellyfin_version ~ '$')
+            fail_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
+            success_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version }}"
 
-    # `JELLYFIN_PublishedServerUrl` has exactly one way into the process: the
-    # environment file the role renders from templates/env.j2. An unconfigured
-    # container reports its own listening address here instead.
-    - name: Assert the published server URL from the role reached the process
-      ansible.builtin.assert:
-        that: jellyfin_public_info.json.LocalAddress == jellyfin_published_server_url
-        fail_msg: >-
-          Jellyfin reports LocalAddress {{ jellyfin_public_info.json.LocalAddress }},
-          not the configured {{ jellyfin_published_server_url }}
-        success_msg: "Jellyfin reports the configured published server URL"
+        # `JELLYFIN_PublishedServerUrl` has exactly one way into the process: the
+        # environment file the role renders from templates/env.j2. An unconfigured
+        # container reports its own listening address here instead.
+        - name: Assert the published server URL from the role reached the process
+          ansible.builtin.assert:
+            that: jellyfin_public_info.json.LocalAddress == jellyfin_published_server_url
+            fail_msg: >-
+              Jellyfin reports LocalAddress {{ jellyfin_public_info.json.LocalAddress }},
+              not the configured {{ jellyfin_published_server_url }}
+            success_msg: "Jellyfin reports the configured published server URL"
 
-    - name: Assert the Jellyfin first-run wizard has not been completed yet
-      ansible.builtin.assert:
-        that: not jellyfin_public_info.json.StartupWizardCompleted
-        fail_msg: "Jellyfin reports its first-run wizard as already completed before the verification ran it"
-        success_msg: "Jellyfin reports its first-run wizard as outstanding"
+        - name: Assert the Jellyfin first-run wizard has not been completed yet
+          ansible.builtin.assert:
+            that: not jellyfin_public_info.json.StartupWizardCompleted
+            fail_msg: "Jellyfin reports its first-run wizard as already completed before the verification ran it"
+            success_msg: "Jellyfin reports its first-run wizard as outstanding"
 
-    - name: Assert the Jellyfin web root redirects rather than serving from /
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/"
-        method: GET
-        status_code: [302]
-        follow_redirects: none
-      register: jellyfin_root
-      changed_when: false
+        - name: Assert the Jellyfin web root redirects rather than serving from /
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/"
+            method: GET
+            status_code: [302]
+            follow_redirects: none
+          register: jellyfin_root
+          changed_when: false
 
-    # ------------------------------------------------------------------
-    # Completing the first-run wizard, which is what makes the library database
-    # get written to the bind-mounted data path, and what yields a token for the
-    # authenticated API.
-    # ------------------------------------------------------------------
-    - name: Configure the Jellyfin first-run wizard
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/Startup/Configuration"
-        method: POST
-        body_format: json
-        body:
-          UICulture: en-US
-          MetadataCountryCode: US
-          PreferredMetadataLanguage: en
-        status_code: [204]
-      changed_when: true
+        # ------------------------------------------------------------------
+        # Completing the first-run wizard, which is what makes the library database
+        # get written to the bind-mounted data path, and what yields a token for the
+        # authenticated API.
+        # ------------------------------------------------------------------
+        - name: Configure the Jellyfin first-run wizard
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/Startup/Configuration"
+            method: POST
+            body_format: json
+            body:
+              UICulture: en-US
+              MetadataCountryCode: US
+              PreferredMetadataLanguage: en
+            status_code: [204]
+          changed_when: true
 
-    # Not decoration: GET /Startup/User is what makes Jellyfin initialize its
-    # user store, and POST /Startup/User answers 404 until it has. The web
-    # wizard performs this GET when it opens the account step, so a scenario
-    # that skips it hits a 404 that has nothing to do with the role.
-    - name: Read the Jellyfin first-run wizard user
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/Startup/User"
-        method: GET
-        status_code: [200, 404, 500, 503]
-      register: jellyfin_wizard_user
-      until: jellyfin_wizard_user.status == 200
-      retries: 30
-      delay: 2
-      changed_when: false
-      failed_when: false
+        # Not decoration: GET /Startup/User is what makes Jellyfin initialize its
+        # user store, and POST /Startup/User answers 404 until it has. The web
+        # wizard performs this GET when it opens the account step, so a scenario
+        # that skips it hits a 404 that has nothing to do with the role.
+        - name: Read the Jellyfin first-run wizard user
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/Startup/User"
+            method: GET
+            status_code: [200, 404, 500, 503]
+          register: jellyfin_wizard_user
+          until: jellyfin_wizard_user.status == 200
+          retries: 30
+          delay: 2
+          changed_when: false
+          failed_when: false
 
-    - name: Assert the Jellyfin first-run wizard is ready to take an administrator
-      ansible.builtin.assert:
-        that: jellyfin_wizard_user.status == 200
-        fail_msg: "/Startup/User answered {{ jellyfin_wizard_user.status | default('none') }}; the wizard never became ready"
-        success_msg: "The first-run wizard is ready"
+        - name: Assert the Jellyfin first-run wizard is ready to take an administrator
+          ansible.builtin.assert:
+            that: jellyfin_wizard_user.status == 200
+            fail_msg: "/Startup/User answered {{ jellyfin_wizard_user.status | default('none') }}; the wizard never became ready"
+            success_msg: "The first-run wizard is ready"
 
-    - name: Create the Jellyfin administrator through the first-run wizard
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/Startup/User"
-        method: POST
-        body_format: json
-        body:
-          Name: "{{ jellyfin_molecule_admin_username }}"
-          Password: "{{ jellyfin_molecule_admin_password }}"
-        status_code: [204]
-      changed_when: true
+        - name: Create the Jellyfin administrator through the first-run wizard
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/Startup/User"
+            method: POST
+            body_format: json
+            body:
+              Name: "{{ jellyfin_molecule_admin_username }}"
+              Password: "{{ jellyfin_molecule_admin_password }}"
+            status_code: [204]
+          changed_when: true
 
-    - name: Complete the Jellyfin first-run wizard
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/Startup/Complete"
-        method: POST
-        status_code: [204]
-      changed_when: true
+        - name: Complete the Jellyfin first-run wizard
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/Startup/Complete"
+            method: POST
+            status_code: [204]
+          changed_when: true
 
-    - name: Authenticate against Jellyfin as the administrator
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/Users/AuthenticateByName"
-        method: POST
-        headers:
-          Authorization: "{{ jellyfin_molecule_client_header }}"
-        body_format: json
-        body:
-          Username: "{{ jellyfin_molecule_admin_username }}"
-          Pw: "{{ jellyfin_molecule_admin_password }}"
-        status_code: [200, 401]
-      register: jellyfin_authentication
-      changed_when: false
+        - name: Authenticate against Jellyfin as the administrator
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/Users/AuthenticateByName"
+            method: POST
+            headers:
+              Authorization: "{{ jellyfin_molecule_client_header }}"
+            body_format: json
+            body:
+              Username: "{{ jellyfin_molecule_admin_username }}"
+              Pw: "{{ jellyfin_molecule_admin_password }}"
+            status_code: [200, 401]
+          register: jellyfin_authentication
+          changed_when: false
 
-    - name: Assert the Jellyfin administrator can authenticate
-      ansible.builtin.assert:
-        that:
-          - jellyfin_authentication.status == 200
-          - jellyfin_authentication.json.AccessToken | default('') | length > 0
-          - jellyfin_authentication.json.User.Policy.IsAdministrator
-        fail_msg: "Could not authenticate as the administrator the first-run wizard created"
-        success_msg: "Authenticated as an administrator; Jellyfin's library database is writable"
+        - name: Assert the Jellyfin administrator can authenticate
+          ansible.builtin.assert:
+            that:
+              - jellyfin_authentication.status == 200
+              - jellyfin_authentication.json.AccessToken | default('') | length > 0
+              - jellyfin_authentication.json.User.Policy.IsAdministrator
+            fail_msg: "Could not authenticate as the administrator the first-run wizard created"
+            success_msg: "Authenticated as an administrator; Jellyfin's library database is writable"
 
-    - name: Record the Jellyfin access token
-      ansible.builtin.set_fact:
-        jellyfin_molecule_token: "{{ jellyfin_authentication.json.AccessToken }}"
+        - name: Record the Jellyfin access token
+          ansible.builtin.set_fact:
+            jellyfin_molecule_token: "{{ jellyfin_authentication.json.AccessToken }}"
 
-    - name: Read the authenticated Jellyfin system information
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/System/Info"
-        method: GET
-        headers:
-          X-Emby-Token: "{{ jellyfin_molecule_token }}"
-        status_code: [200, 401]
-      register: jellyfin_system_info
-      changed_when: false
+        - name: Read the authenticated Jellyfin system information
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/System/Info"
+            method: GET
+            headers:
+              X-Emby-Token: "{{ jellyfin_molecule_token }}"
+            status_code: [200, 401]
+          register: jellyfin_system_info
+          changed_when: false
 
-    - name: Assert the authenticated Jellyfin system information is reachable
-      ansible.builtin.assert:
-        that:
-          - jellyfin_system_info.status == 200
-          - jellyfin_system_info.json.StartupWizardCompleted
-        fail_msg: "/System/Info answered {{ jellyfin_system_info.status }} for an administrator token"
-        success_msg: "/System/Info answers an administrator token"
+        - name: Assert the authenticated Jellyfin system information is reachable
+          ansible.builtin.assert:
+            that:
+              - jellyfin_system_info.status == 200
+              - jellyfin_system_info.json.StartupWizardCompleted
+            fail_msg: "/System/Info answered {{ jellyfin_system_info.status }} for an administrator token"
+            success_msg: "/System/Info answers an administrator token"
 
-    # The passer-by half of the pair below: once the wizard is done, the same
-    # anonymous request that owns an unconfigured Jellyfin is refused here.
-    - name: Attempt to seize the role's Jellyfin through the first-run wizard
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/Startup/User"
-        method: POST
-        body_format: json
-        body:
-          Name: passer-by
-          Password: passer-by
-        status_code: [204, 401, 403]
-      register: jellyfin_seizure_attempt
-      changed_when: false
+        # The passer-by half of the pair below: once the wizard is done, the same
+        # anonymous request that owns an unconfigured Jellyfin is refused here.
+        - name: Attempt to seize the role's Jellyfin through the first-run wizard
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/Startup/User"
+            method: POST
+            body_format: json
+            body:
+              Name: passer-by
+              Password: passer-by
+            status_code: [204, 401, 403]
+          register: jellyfin_seizure_attempt
+          changed_when: false
 
-    - name: Assert the role's Jellyfin refuses an anonymous first-run wizard call
-      ansible.builtin.assert:
-        that: jellyfin_seizure_attempt.status in [401, 403]
-        fail_msg: >-
-          An anonymous POST to /Startup/User was accepted ({{ jellyfin_seizure_attempt.status }})
-          on a Jellyfin whose first-run wizard has been completed
-        success_msg: "An anonymous first-run wizard call is refused with {{ jellyfin_seizure_attempt.status }}"
+        - name: Assert the role's Jellyfin refuses an anonymous first-run wizard call
+          ansible.builtin.assert:
+            that: jellyfin_seizure_attempt.status in [401, 403]
+            fail_msg: >-
+              An anonymous POST to /Startup/User was accepted ({{ jellyfin_seizure_attempt.status }})
+              on a Jellyfin whose first-run wizard has been completed
+            success_msg: "An anonymous first-run wizard call is refused with {{ jellyfin_seizure_attempt.status }}"
 
-    # ------------------------------------------------------------------
-    # The bind mounts, asked of the process rather than of docker. Jellyfin is
-    # made to list the directories back, so a mount that docker accepted but
-    # that never reached the application would not pass.
-    # ------------------------------------------------------------------
-    - name: List the Jellyfin media path through Jellyfin itself
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_media_bind_path | urlencode }}&includeFiles=true"
-        method: GET
-        headers:
-          X-Emby-Token: "{{ jellyfin_molecule_token }}"
-        status_code: [200, 404]
-      register: jellyfin_media_listing
-      changed_when: false
+        # ------------------------------------------------------------------
+        # The bind mounts, asked of the process rather than of docker. Jellyfin is
+        # made to list the directories back, so a mount that docker accepted but
+        # that never reached the application would not pass.
+        # ------------------------------------------------------------------
+        - name: List the Jellyfin media path through Jellyfin itself
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_media_bind_path | urlencode }}&includeFiles=true"
+            method: GET
+            headers:
+              X-Emby-Token: "{{ jellyfin_molecule_token }}"
+            status_code: [200, 404]
+          register: jellyfin_media_listing
+          changed_when: false
 
-    - name: Assert the Jellyfin media bind mount reached the process
-      ansible.builtin.assert:
-        that:
-          - jellyfin_media_listing.status == 200
-          - jellyfin_molecule_marker_filename in (jellyfin_media_listing.json | map(attribute='Name') | list)
-        fail_msg: >-
-          Jellyfin cannot see {{ jellyfin_molecule_marker_filename }} under
-          {{ jellyfin_media_bind_path }}, so jellyfin_media_bind_path did not reach it
-        success_msg: "Jellyfin sees the host's media path at {{ jellyfin_media_bind_path }}"
+        - name: Assert the Jellyfin media bind mount reached the process
+          ansible.builtin.assert:
+            that:
+              - jellyfin_media_listing.status == 200
+              - jellyfin_molecule_marker_filename in (jellyfin_media_listing.json | map(attribute='Name') | list)
+            fail_msg: >-
+              Jellyfin cannot see {{ jellyfin_molecule_marker_filename }} under
+              {{ jellyfin_media_bind_path }}, so jellyfin_media_bind_path did not reach it
+            success_msg: "Jellyfin sees the host's media path at {{ jellyfin_media_bind_path }}"
 
-    - name: List the Jellyfin additional volume through Jellyfin itself
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_container_additional_volumes[0].dst | urlencode }}&includeFiles=true"
-        method: GET
-        headers:
-          X-Emby-Token: "{{ jellyfin_molecule_token }}"
-        status_code: [200, 404]
-      register: jellyfin_additional_volume_listing
-      changed_when: false
+        - name: List the Jellyfin additional volume through Jellyfin itself
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_container_additional_volumes[0].dst | urlencode }}&includeFiles=true"
+            method: GET
+            headers:
+              X-Emby-Token: "{{ jellyfin_molecule_token }}"
+            status_code: [200, 404]
+          register: jellyfin_additional_volume_listing
+          changed_when: false
 
-    - name: Assert the Jellyfin additional volume reached the process
-      ansible.builtin.assert:
-        that:
-          - jellyfin_additional_volume_listing.status == 200
-          - jellyfin_molecule_marker_filename in (jellyfin_additional_volume_listing.json | map(attribute='Name') | list)
-        fail_msg: >-
-          Jellyfin cannot see {{ jellyfin_molecule_marker_filename }} under
-          {{ jellyfin_container_additional_volumes[0].dst }}, so
-          jellyfin_container_additional_volumes is inert
-        success_msg: "Jellyfin sees the additional volume at {{ jellyfin_container_additional_volumes[0].dst }}"
+        - name: Assert the Jellyfin additional volume reached the process
+          ansible.builtin.assert:
+            that:
+              - jellyfin_additional_volume_listing.status == 200
+              - jellyfin_molecule_marker_filename in (jellyfin_additional_volume_listing.json | map(attribute='Name') | list)
+            fail_msg: >-
+              Jellyfin cannot see {{ jellyfin_molecule_marker_filename }} under
+              {{ jellyfin_container_additional_volumes[0].dst }}, so
+              jellyfin_container_additional_volumes is inert
+            success_msg: "Jellyfin sees the additional volume at {{ jellyfin_container_additional_volumes[0].dst }}"
 
-    - name: Check the Jellyfin library database on the host
-      ansible.builtin.stat:
-        path: "{{ jellyfin_molecule_library_database }}"
-      register: jellyfin_library_database
+        - name: Check the Jellyfin library database on the host
+          ansible.builtin.stat:
+            path: "{{ jellyfin_molecule_library_database }}"
+          register: jellyfin_library_database
 
-    - name: Assert the Jellyfin library database landed on the role's data path
-      ansible.builtin.assert:
-        that: jellyfin_library_database.stat.exists
-        fail_msg: >-
-          No library database under the role's data path; Jellyfin wrote its state
-          inside the container instead of onto the /config bind mount
-        success_msg: "Jellyfin's library database sits on the role's data path"
+        - name: Assert the Jellyfin library database landed on the role's data path
+          ansible.builtin.assert:
+            that: jellyfin_library_database.stat.exists
+            fail_msg: >-
+              No library database under the role's data path; Jellyfin wrote its state
+              inside the container instead of onto the /config bind mount
+            success_msg: "Jellyfin's library database sits on the role's data path"
 
-    # ------------------------------------------------------------------
-    # What `docker create` was actually told
-    # ------------------------------------------------------------------
-    - name: Assert the container runtime the role was given was passed through
-      ansible.builtin.assert:
-        that: jellyfin_container_definition.HostConfig.Runtime == jellyfin_container_runtime
-        fail_msg: >-
-          The container runs under runtime
-          '{{ jellyfin_container_definition.HostConfig.Runtime }}', not
-          '{{ jellyfin_container_runtime }}'
-        success_msg: "The container runs under the configured '{{ jellyfin_container_runtime }}' runtime"
+        # ------------------------------------------------------------------
+        # What `docker create` was actually told
+        # ------------------------------------------------------------------
+        - name: Assert the container runtime the role was given was passed through
+          ansible.builtin.assert:
+            that: jellyfin_container_definition.HostConfig.Runtime == jellyfin_container_runtime
+            fail_msg: >-
+              The container runs under runtime
+              '{{ jellyfin_container_definition.HostConfig.Runtime }}', not
+              '{{ jellyfin_container_runtime }}'
+            success_msg: "The container runs under the configured '{{ jellyfin_container_runtime }}' runtime"
 
-    - name: Assert the configured device was passed through to the container
-      ansible.builtin.assert:
-        that: >-
-          jellyfin_container_definition.HostConfig.Devices | default([], true)
-          | selectattr('PathOnHost', 'equalto', jellyfin_gpu_path)
-          | selectattr('PathInContainer', 'equalto', jellyfin_gpu_bind_path)
-          | list | length == 1
-        fail_msg: >-
-          {{ jellyfin_gpu_path }} was not passed through as {{ jellyfin_gpu_bind_path }};
-          devices seen: {{ jellyfin_container_definition.HostConfig.Devices }}
-        success_msg: "{{ jellyfin_gpu_path }} is passed through as {{ jellyfin_gpu_bind_path }}"
+        - name: Assert the configured device was passed through to the container
+          ansible.builtin.assert:
+            that: >-
+              jellyfin_container_definition.HostConfig.Devices | default([], true)
+              | selectattr('PathOnHost', 'equalto', jellyfin_gpu_path)
+              | selectattr('PathInContainer', 'equalto', jellyfin_gpu_bind_path)
+              | list | length == 1
+            fail_msg: >-
+              {{ jellyfin_gpu_path }} was not passed through as {{ jellyfin_gpu_bind_path }};
+              devices seen: {{ jellyfin_container_definition.HostConfig.Devices }}
+            success_msg: "{{ jellyfin_gpu_path }} is passed through as {{ jellyfin_gpu_bind_path }}"
 
-    - name: Assert the HTTP port the role publishes is the one the container listens on
-      ansible.builtin.assert:
-        that:
-          - ((jellyfin_defaults.jellyfin_container_http_port | string) ~ '/tcp') in jellyfin_container_definition.NetworkSettings.Ports
-          - jellyfin_container_definition.HostConfig.NetworkMode == jellyfin_molecule_network
-        fail_msg: >-
-          The container does not publish {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp;
-          published: {{ jellyfin_container_definition.NetworkSettings.Ports.keys() | list }}
-        success_msg: "The container publishes {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp on the {{ jellyfin_molecule_network }} network"
+        - name: Assert the HTTP port the role publishes is the one the container listens on
+          ansible.builtin.assert:
+            that:
+              - ((jellyfin_defaults.jellyfin_container_http_port | string) ~ '/tcp') in jellyfin_container_definition.NetworkSettings.Ports
+              - jellyfin_container_definition.HostConfig.NetworkMode == jellyfin_molecule_network
+            fail_msg: >-
+              The container does not publish {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp;
+              published: {{ jellyfin_container_definition.NetworkSettings.Ports.keys() | list }}
+            success_msg: "The container publishes {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp on the {{ jellyfin_molecule_network }} network"
 
-    - name: Assert the extra container argument reached docker
-      ansible.builtin.assert:
-        that: jellyfin_container_definition.Config.Labels['jellyfin.molecule.extra-argument'] | default('') == 'applied'
-        fail_msg: "jellyfin_container_extra_arguments did not reach the docker command line"
-        success_msg: "jellyfin_container_extra_arguments reaches the docker command line"
+        - name: Assert the extra container argument reached docker
+          ansible.builtin.assert:
+            that: jellyfin_container_definition.Config.Labels['jellyfin.molecule.extra-argument'] | default('') == 'applied'
+            fail_msg: "jellyfin_container_extra_arguments did not reach the docker command line"
+            success_msg: "jellyfin_container_extra_arguments reaches the docker command line"
 
-    - name: Assert the additional environment variable reached the container
-      ansible.builtin.assert:
-        that: "'JELLYFIN_MOLECULE_MARKER=applied' in jellyfin_container_definition.Config.Env"
-        fail_msg: "jellyfin_environment_variables_additional_variables did not reach the container environment"
-        success_msg: "jellyfin_environment_variables_additional_variables reaches the container environment"
+        - name: Assert the additional environment variable reached the container
+          ansible.builtin.assert:
+            that: "'JELLYFIN_MOLECULE_MARKER=applied' in jellyfin_container_definition.Config.Env"
+            fail_msg: "jellyfin_environment_variables_additional_variables did not reach the container environment"
+            success_msg: "jellyfin_environment_variables_additional_variables reaches the container environment"
 
-    # ------------------------------------------------------------------
-    # The Traefik labels. Traefik is not running: what is being checked is that
-    # the role emits the labels it was configured to emit, with the values it
-    # was given, including the branches a non-root path prefix turns on.
-    # ------------------------------------------------------------------
-    - name: Assert the Traefik labels carry the configured routing
-      ansible.builtin.assert:
-        that:
-          - jellyfin_container_definition.Config.Labels['traefik.enable'] == 'true'
-          - >-
-            jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.rule']
-            == 'Host(`' ~ jellyfin_hostname ~ '`) && PathPrefix(`' ~ jellyfin_path_prefix ~ '`)'
-          - jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.entrypoints'] == jellyfin_container_labels_traefik_entrypoints
-          - jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.tls'] == 'true'
-          - jellyfin_container_definition.Config.Labels['traefik.http.middlewares.jellyfin-strip-prefix.stripprefix.prefixes'] == jellyfin_path_prefix
-          - >-
-            jellyfin_container_definition.Config.Labels['traefik.http.services.jellyfin.loadbalancer.server.port']
-            == (jellyfin_defaults.jellyfin_container_http_port | string)
-        fail_msg: "The Traefik labels do not match the role's configuration: {{ jellyfin_container_definition.Config.Labels }}"
-        success_msg: "The Traefik labels match the role's configuration"
+        # ------------------------------------------------------------------
+        # The Traefik labels. Traefik is not running: what is being checked is that
+        # the role emits the labels it was configured to emit, with the values it
+        # was given, including the branches a non-root path prefix turns on.
+        # ------------------------------------------------------------------
+        - name: Assert the Traefik labels carry the configured routing
+          ansible.builtin.assert:
+            that:
+              - jellyfin_container_definition.Config.Labels['traefik.enable'] == 'true'
+              - >-
+                jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.rule']
+                == 'Host(`' ~ jellyfin_hostname ~ '`) && PathPrefix(`' ~ jellyfin_path_prefix ~ '`)'
+              - jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.entrypoints'] == jellyfin_container_labels_traefik_entrypoints
+              - jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.tls'] == 'true'
+              - jellyfin_container_definition.Config.Labels['traefik.http.middlewares.jellyfin-strip-prefix.stripprefix.prefixes'] == jellyfin_path_prefix
+              - >-
+                jellyfin_container_definition.Config.Labels['traefik.http.services.jellyfin.loadbalancer.server.port']
+                == (jellyfin_defaults.jellyfin_container_http_port | string)
+            fail_msg: "The Traefik labels do not match the role's configuration: {{ jellyfin_container_definition.Config.Labels }}"
+            success_msg: "The Traefik labels match the role's configuration"
 
-    # ------------------------------------------------------------------
-    # Restarting. The unit creates its container with `--rm` and removes it
-    # again on the way down, so anything Jellyfin has to remember has to have
-    # been written through the /config bind mount to survive.
-    # ------------------------------------------------------------------
-    - name: Restart the Jellyfin service
-      ansible.builtin.systemd_service:
-        name: jellyfin.service
-        state: restarted
+        # ------------------------------------------------------------------
+        # Restarting. The unit creates its container with `--rm` and removes it
+        # again on the way down, so anything Jellyfin has to remember has to have
+        # been written through the /config bind mount to survive.
+        # ------------------------------------------------------------------
+        - name: Restart the Jellyfin service
+          ansible.builtin.systemd_service:
+            name: jellyfin.service
+            state: restarted
 
-    - name: Wait for Jellyfin to come back
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_url }}/System/Info/Public"
-        method: GET
-        status_code: [200, 503]
-      register: jellyfin_public_info_after_restart
-      until: jellyfin_public_info_after_restart.status == 200
-      retries: 60
-      delay: 5
-      failed_when: false
+        - name: Wait for Jellyfin to come back
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_url }}/System/Info/Public"
+            method: GET
+            status_code: [200, 503]
+          register: jellyfin_public_info_after_restart
+          until: jellyfin_public_info_after_restart.status == 200
+          retries: 60
+          delay: 5
+          failed_when: false
 
-    - name: Assert Jellyfin kept its state across a restart
-      ansible.builtin.assert:
-        that:
-          - jellyfin_public_info_after_restart.status == 200
-          - jellyfin_public_info_after_restart.json.StartupWizardCompleted
-          - jellyfin_public_info_after_restart.json.LocalAddress == jellyfin_published_server_url
-        fail_msg: >-
-          After a restart Jellyfin reports
-          StartupWizardCompleted={{ jellyfin_public_info_after_restart.json.StartupWizardCompleted | default('n/a') }};
-          the /config bind mount is not persisting state
-        success_msg: "Jellyfin's state survived the container being recreated"
+        - name: Assert Jellyfin kept its state across a restart
+          ansible.builtin.assert:
+            that:
+              - jellyfin_public_info_after_restart.status == 200
+              - jellyfin_public_info_after_restart.json.StartupWizardCompleted
+              - jellyfin_public_info_after_restart.json.LocalAddress == jellyfin_published_server_url
+            fail_msg: >-
+              After a restart Jellyfin reports
+              StartupWizardCompleted={{ jellyfin_public_info_after_restart.json.StartupWizardCompleted | default('n/a') }};
+              the /config bind mount is not persisting state
+            success_msg: "Jellyfin's state survived the container being recreated"
 
-    - name: Read the timezone inside the Jellyfin container
-      ansible.builtin.command:
-        cmd: "docker exec {{ jellyfin_molecule_container }} date +%z"
-      register: jellyfin_container_timezone
-      changed_when: false
+        - name: Read the timezone inside the Jellyfin container
+          ansible.builtin.command:
+            cmd: "docker exec {{ jellyfin_molecule_container }} date +%z"
+          register: jellyfin_container_timezone
+          changed_when: false
 
-    # The role's timezone reaches the container only through `TZ` in the
-    # rendered environment file, and the host this runs on is UTC.
-    - name: Assert the configured timezone reached the container
-      ansible.builtin.assert:
-        that: jellyfin_container_timezone.stdout | trim == '+1400'
-        fail_msg: >-
-          The container reports UTC offset {{ jellyfin_container_timezone.stdout | trim }};
-          jellyfin_timezone ({{ jellyfin_timezone }}) did not reach it
-        success_msg: "The container runs on the configured {{ jellyfin_timezone }}"
+        # The role's timezone reaches the container only through `TZ` in the
+        # rendered environment file, and the host this runs on is UTC.
+        - name: Assert the configured timezone reached the container
+          ansible.builtin.assert:
+            that: jellyfin_container_timezone.stdout | trim == '+1400'
+            fail_msg: >-
+              The container reports UTC offset {{ jellyfin_container_timezone.stdout | trim }};
+              jellyfin_timezone ({{ jellyfin_timezone }}) did not reach it
+            success_msg: "The container runs on the configured {{ jellyfin_timezone }}"
 
-    # ------------------------------------------------------------------
-    # The negative control, which was started at the top of this play.
-    # ------------------------------------------------------------------
-    - name: Wait for the unconfigured Jellyfin negative control
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_control_url }}/System/Info/Public"
-        method: GET
-        status_code: [200, 503]
-      register: jellyfin_control_info
-      until: jellyfin_control_info.status == 200
-      retries: 60
-      delay: 5
-      failed_when: false
+        # ------------------------------------------------------------------
+        # The negative control, which was started at the top of this play.
+        # ------------------------------------------------------------------
+        - name: Wait for the unconfigured Jellyfin negative control
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_control_url }}/System/Info/Public"
+            method: GET
+            status_code: [200, 503]
+          register: jellyfin_control_info
+          until: jellyfin_control_info.status == 200
+          retries: 60
+          delay: 5
+          failed_when: false
 
-    - name: Assert the negative control is a healthy but unconfigured Jellyfin
-      ansible.builtin.assert:
-        that:
-          - jellyfin_control_info.status == 200
-          - not jellyfin_control_info.json.StartupWizardCompleted
-        fail_msg: "The negative control container is not a running, unconfigured Jellyfin; it cannot falsify anything"
-        success_msg: "The negative control is a running, unconfigured Jellyfin"
+        - name: Assert the negative control is a healthy but unconfigured Jellyfin
+          ansible.builtin.assert:
+            that:
+              - jellyfin_control_info.status == 200
+              - not jellyfin_control_info.json.StartupWizardCompleted
+            fail_msg: "The negative control container is not a running, unconfigured Jellyfin; it cannot falsify anything"
+            success_msg: "The negative control is a running, unconfigured Jellyfin"
 
-    - name: Assert the negative control does not report the role's published server URL
-      ansible.builtin.assert:
-        that: jellyfin_control_info.json.LocalAddress != jellyfin_published_server_url
-        fail_msg: >-
-          An unconfigured Jellyfin also reports LocalAddress
-          {{ jellyfin_published_server_url }}, so that assert proves nothing
-        success_msg: "An unconfigured Jellyfin reports {{ jellyfin_control_info.json.LocalAddress }} instead"
+        - name: Assert the negative control does not report the role's published server URL
+          ansible.builtin.assert:
+            that: jellyfin_control_info.json.LocalAddress != jellyfin_published_server_url
+            fail_msg: >-
+              An unconfigured Jellyfin also reports LocalAddress
+              {{ jellyfin_published_server_url }}, so that assert proves nothing
+            success_msg: "An unconfigured Jellyfin reports {{ jellyfin_control_info.json.LocalAddress }} instead"
 
-    # The other half of the pair: on a Jellyfin nobody has configured, the very
-    # same anonymous request that was refused above creates the administrator.
-    # The same two anonymous calls the web wizard makes, in the same order: the
-    # GET initializes the user store, the POST takes it over.
-    - name: Read the unconfigured Jellyfin's first-run wizard user
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_control_url }}/Startup/User"
-        method: GET
-        status_code: [200, 404, 500, 503]
-      register: jellyfin_control_wizard_user
-      until: jellyfin_control_wizard_user.status == 200
-      retries: 30
-      delay: 2
-      changed_when: false
-      failed_when: false
+        # The other half of the pair: on a Jellyfin nobody has configured, the very
+        # same anonymous request that was refused above creates the administrator.
+        # The same two anonymous calls the web wizard makes, in the same order: the
+        # GET initializes the user store, the POST takes it over.
+        - name: Read the unconfigured Jellyfin's first-run wizard user
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_control_url }}/Startup/User"
+            method: GET
+            status_code: [200, 404, 500, 503]
+          register: jellyfin_control_wizard_user
+          until: jellyfin_control_wizard_user.status == 200
+          retries: 30
+          delay: 2
+          changed_when: false
+          failed_when: false
 
-    - name: Seize the unconfigured Jellyfin as an anonymous passer-by
-      ansible.builtin.uri:
-        url: "{{ jellyfin_molecule_control_url }}/Startup/User"
-        method: POST
-        body_format: json
-        body:
-          Name: passer-by
-          Password: passer-by
-        status_code: [204, 401, 403]
-      register: jellyfin_control_seizure
-      changed_when: false
+        - name: Seize the unconfigured Jellyfin as an anonymous passer-by
+          ansible.builtin.uri:
+            url: "{{ jellyfin_molecule_control_url }}/Startup/User"
+            method: POST
+            body_format: json
+            body:
+              Name: passer-by
+              Password: passer-by
+            status_code: [204, 401, 403]
+          register: jellyfin_control_seizure
+          changed_when: false
 
-    - name: Assert the refusal above was not something every Jellyfin does
-      ansible.builtin.assert:
-        that: jellyfin_control_seizure.status == 204
-        fail_msg: >-
-          An unconfigured Jellyfin also refuses an anonymous /Startup/User
-          ({{ jellyfin_control_seizure.status }}), so the refusal on the role's
-          instance is not evidence that its wizard was completed
-        success_msg: "An unconfigured Jellyfin accepts the anonymous call that the role's instance refuses"
+        - name: Assert the refusal above was not something every Jellyfin does
+          ansible.builtin.assert:
+            that: jellyfin_control_seizure.status == 204
+            fail_msg: >-
+              An unconfigured Jellyfin also refuses an anonymous /Startup/User
+              ({{ jellyfin_control_seizure.status }}), so the refusal on the role's
+              instance is not evidence that its wizard was completed
+            success_msg: "An unconfigured Jellyfin accepts the anonymous call that the role's instance refuses"
 
-    - name: Look for the marker file inside the negative control container
-      ansible.builtin.command:
-        cmd: >-
-          docker exec {{ jellyfin_molecule_control_container }}
-          test -e {{ jellyfin_media_bind_path }}/{{ jellyfin_molecule_marker_filename }}
-      register: jellyfin_control_marker
-      changed_when: false
-      failed_when: false
+        - name: Look for the marker file inside the negative control container
+          ansible.builtin.command:
+            cmd: >-
+              docker exec {{ jellyfin_molecule_control_container }}
+              test -e {{ jellyfin_media_bind_path }}/{{ jellyfin_molecule_marker_filename }}
+          register: jellyfin_control_marker
+          changed_when: false
+          failed_when: false
 
-    - name: Assert the negative control has no media bind mount
-      ansible.builtin.assert:
-        that: jellyfin_control_marker.rc != 0
-        fail_msg: >-
-          The unconfigured container also has {{ jellyfin_media_bind_path }} populated,
-          so the media mount assert proves nothing
-        success_msg: "The unconfigured container has no media bind mount"
+        - name: Assert the negative control has no media bind mount
+          ansible.builtin.assert:
+            that: jellyfin_control_marker.rc != 0
+            fail_msg: >-
+              The unconfigured container also has {{ jellyfin_media_bind_path }} populated,
+              so the media mount assert proves nothing
+            success_msg: "The unconfigured container has no media bind mount"
 
-    - name: Read the timezone inside the negative control container
-      ansible.builtin.command:
-        cmd: "docker exec {{ jellyfin_molecule_control_container }} date +%z"
-      register: jellyfin_control_timezone
-      changed_when: false
+        - name: Read the timezone inside the negative control container
+          ansible.builtin.command:
+            cmd: "docker exec {{ jellyfin_molecule_control_container }} date +%z"
+          register: jellyfin_control_timezone
+          changed_when: false
 
-    - name: Assert the negative control does not run on the configured timezone
-      ansible.builtin.assert:
-        that: jellyfin_control_timezone.stdout | trim != '+1400'
-        fail_msg: >-
-          An unconfigured container also reports +1400, so the timezone assert
-          proves nothing
-        success_msg: "An unconfigured container reports {{ jellyfin_control_timezone.stdout | trim }} instead"
+        - name: Assert the negative control does not run on the configured timezone
+          ansible.builtin.assert:
+            that: jellyfin_control_timezone.stdout | trim != '+1400'
+            fail_msg: >-
+              An unconfigured container also reports +1400, so the timezone assert
+              proves nothing
+            success_msg: "An unconfigured container reports {{ jellyfin_control_timezone.stdout | trim }} instead"
 
-    - name: Ensure the Jellyfin negative control container is removed
-      ansible.builtin.command:
-        cmd: "docker rm -f {{ jellyfin_molecule_control_container }}"
-      changed_when: true
+        - name: Ensure the Jellyfin negative control container is removed
+          ansible.builtin.command:
+            cmd: "docker rm -f {{ jellyfin_molecule_control_container }}"
+          changed_when: true
 
-    - name: Show the Jellyfin verification summary
-      ansible.builtin.debug:
-        msg:
-          - "Jellyfin systemd: {{ jellyfin_service.status.ActiveState }} ({{ jellyfin_service.status.NRestarts }} restarts)"
-          - "Jellyfin version: {{ jellyfin_public_info.json.Version }}"
-          - "Jellyfin image: {{ jellyfin_container_definition.Config.Image }}"
-          - "Jellyfin published server URL: {{ jellyfin_public_info.json.LocalAddress }}"
-          - "Jellyfin timezone offset: {{ jellyfin_container_timezone.stdout | trim }}"
+        - name: Show the Jellyfin verification summary
+          ansible.builtin.debug:
+            msg:
+              - "Jellyfin systemd: {{ jellyfin_service.status.ActiveState }} ({{ jellyfin_service.status.NRestarts }} restarts)"
+              - "Jellyfin version: {{ jellyfin_public_info.json.Version }}"
+              - "Jellyfin image: {{ jellyfin_container_definition.Config.Image }}"
+              - "Jellyfin published server URL: {{ jellyfin_public_info.json.LocalAddress }}"
+              - "Jellyfin timezone offset: {{ jellyfin_container_timezone.stdout | trim }}"
 
       rescue:
         # Whatever went wrong, the reason is almost always in the systemd service log.
