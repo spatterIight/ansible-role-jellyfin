@@ -22,6 +22,8 @@
     jellyfin_molecule_client_header: 'MediaBrowser Client="molecule", Device="molecule", DeviceId="molecule", Version="1"'
 
   tasks:
+    - name: Verify that Jellyfin works
+      block:
     # The role is not included in this playbook, so its defaults are not in
     # scope. Reading defaults/main.yml directly ties the version assertion
     # below.
@@ -596,3 +598,19 @@
           - "Jellyfin image: {{ jellyfin_container_definition.Config.Image }}"
           - "Jellyfin published server URL: {{ jellyfin_public_info.json.LocalAddress }}"
           - "Jellyfin timezone offset: {{ jellyfin_container_timezone.stdout | trim }}"
+
+      rescue:
+        # Whatever went wrong, the reason is almost always in the systemd service log.
+        - name: Retrieve the Jellyfin systemd service log
+          ansible.builtin.command:
+            cmd: journalctl --no-pager --output=cat --unit=jellyfin.service
+          register: jellyfin_service_log
+          changed_when: false
+
+        - name: Show the Jellyfin systemd service log
+          ansible.builtin.debug:
+            var: jellyfin_service_log.stdout_lines
+
+        - name: Fail because verification did not pass
+          ansible.builtin.fail:
+            msg: "Jellyfin verification failed. The systemd service log is printed above."
