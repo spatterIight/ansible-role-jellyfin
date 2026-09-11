@@ -21,6 +21,9 @@
     # this one, which is far less fiddly to spell out.
     jellyfin_molecule_client_header: 'MediaBrowser Client="molecule", Device="molecule", DeviceId="molecule", Version="1"'
 
+    jellyfin_verify_units:
+      - jellyfin.service
+
   tasks:
     - name: Verify that Jellyfin works
       block:
@@ -68,13 +71,14 @@
         # ------------------------------------------------------------------
         # The systemd unit
         # ------------------------------------------------------------------
-        - name: Wait for the Jellyfin systemd service to become active (up to 180s)
+        - name: Wait for the Jellyfin systemd services to become active (up to 180s each)
           ansible.builtin.systemd_service:
-            name: jellyfin.service
-          register: jellyfin_service
-          until: jellyfin_service.status.ActiveState == 'active'
+            name: "{{ item }}"
+          register: jellyfin_services
+          until: jellyfin_services.status.ActiveState == 'active'
           retries: 36
           delay: 5
+          loop: "{{ jellyfin_verify_units }}"
           # So that giving up is reported by the assertion below rather than as a
           # wall of systemd unit properties.
           failed_when: false
@@ -82,17 +86,20 @@
         # `Restart=always` in the systemd unit means that even a container which crashes
         # and gets restarted reads as active here, so this is a precondition rather than
         # a result.
-        - name: Assert the Jellyfin systemd service is active
+        - name: Assert the Jellyfin systemd services are active
           ansible.builtin.assert:
-            that: jellyfin_service.status.ActiveState == 'active'
-            fail_msg: "jellyfin.service is not active ({{ jellyfin_service.status.ActiveState }})"
-            success_msg: "jellyfin.service is active"
+            that: jellyfin_services.results | map(attribute='status.ActiveState') | unique | list == ['active']
+            fail_msg: >-
+              Not every service is active:
+              {{ dict(jellyfin_verify_units | zip(jellyfin_services.results | map(attribute='status.ActiveState'))) }}
+            success_msg: "Every systemd service is active"
 
-        - name: Retrieve the Jellyfin systemd service log for debugging
+        - name: Retrieve the Jellyfin systemd services log for debugging
           when: jellyfin_debug_service_enabled | bool
           ansible.builtin.command:
-            cmd: journalctl --no-pager --output=cat --unit=jellyfin.service
+            cmd: "journalctl --no-pager --output=cat --unit={{ item }}"
           changed_when: false
+          loop: "{{ jellyfin_verify_units }}"
 
         # `Restart=always` keeps a crash-looping unit reported as active, so being
         # active is worth very little on its own. A unit that has been restarted at
@@ -593,7 +600,7 @@
         - name: Show the Jellyfin verification summary
           ansible.builtin.debug:
             msg:
-              - "Jellyfin systemd: {{ jellyfin_service.status.ActiveState }} ({{ jellyfin_service.status.NRestarts }} restarts)"
+              - "Jellyfin systemd: {% for unit, state in jellyfin_verify_units | zip(jellyfin_services.results | map(attribute='status.ActiveState')) %}{{ unit }} ({{ state }}){% if not loop.last %}, {% endif %}{% endfor %}"
               - "Jellyfin version: {{ jellyfin_public_info.json.Version }}"
               - "Jellyfin image: {{ jellyfin_container_definition.Config.Image }}"
               - "Jellyfin published server URL: {{ jellyfin_public_info.json.LocalAddress }}"
