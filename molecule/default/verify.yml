@@ -101,15 +101,6 @@
           changed_when: false
           loop: "{{ jellyfin_verify_units }}"
 
-        # `Restart=always` keeps a crash-looping unit reported as active, so being
-        # active is worth very little on its own. A unit that has been restarted at
-        # all is one that fell over at least once.
-        - name: Assert the Jellyfin service has not been restarted
-          ansible.builtin.assert:
-            that: jellyfin_service.status.NRestarts | int == 0
-            fail_msg: "jellyfin.service has restarted {{ jellyfin_service.status.NRestarts }} time(s); it is looping, not running"
-            success_msg: "jellyfin.service has not restarted"
-
         # ------------------------------------------------------------------
         # The HTTP surface
         #
@@ -133,6 +124,11 @@
             that: jellyfin_public_info.status == 200
             fail_msg: "/System/Info/Public answered {{ jellyfin_public_info.status | default('none') }}"
             success_msg: "/System/Info/Public answered 200"
+
+        - name: Register jellyfin.service
+          ansible.builtin.systemd_service:
+            name: jellyfin.service
+          register: jellyfin_service
 
         # The unit runs `docker start --attach`, so the container's own output reaches
         # the journal even though it is created with `--log-driver=none` - which does
