@@ -160,6 +160,9 @@ jellyfin_container_labels_traefik_priority: 0
 jellyfin_container_labels_traefik_entrypoints: web-secure
 jellyfin_container_labels_traefik_tls: "{{ jellyfin_container_labels_traefik_entrypoints != 'web' }}"
 jellyfin_container_labels_traefik_tls_certResolver: default  # noqa var-naming
+jellyfin_container_labels_traefik_middleware_basic_auth_enabled: true
+# See: https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/basicauth/
+jellyfin_container_labels_traefik_middleware_basic_auth_users: ""
 
 # jellyfin_container_labels_additional_labels contains a multiline string with additional labels to add to the container label file.
 # See `../templates/labels.j2` for details.

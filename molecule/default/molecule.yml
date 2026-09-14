@@ -103,6 +103,8 @@ provisioner:
 
         jellyfin_media_bind_path: /media
 
+        jellyfin_container_labels_traefik_middleware_basic_auth_enabled: false
+
         jellyfin_container_additional_volumes:
           - type: bind
             src: /jellyfin-molecule-extra
