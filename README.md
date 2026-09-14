@@ -36,12 +36,7 @@ Additionally, like all LinuxServer docker images, full `cap-drop` is not support
 
 ### The first-run setup wizard
 
-Jellyfin ships with no accounts. Until somebody completes its first-run wizard, the wizard is open: `POST /Startup/User` followed by `POST /Startup/Complete` creates the administrator, and neither call requires authentication. Whoever makes those calls first owns the server. This is not unusual for self-hosted software and is not something this role can close — Jellyfin offers no setting to bind the wizard to a local address or to require a token — but two details are worth knowing before pointing a public hostname at a freshly deployed instance:
-
-- Jellyfin sends `Access-Control-Allow-Origin: *` on the wizard endpoints and answers the CORS preflight for them, so the calls do not have to come from someone who can reach the port directly. A web page open in any browser that can resolve and reach the instance can make them.
-- While the wizard is outstanding, `/System/Info` — which is authenticated afterwards — answers anonymously, reporting the server's internal paths and architecture.
-
-Both were confirmed against `lscr.io/linuxserver/jellyfin:10.11.11`, and both stop the moment the wizard is completed. Complete it immediately after the first deployment, and prefer doing so before the instance is reachable from the internet.
+Jellyfin ships with no accounts. Until somebody completes its first-run wizard, the wizard is open, and anyone can create an administrator without authentication, so it is recommended to complete the wizard immediately after the first deployment.
 
 ## Development
 
