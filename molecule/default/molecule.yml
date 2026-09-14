@@ -13,10 +13,6 @@ dependency:
 driver:
   name: docker
 platforms:
-  # No ports are published to the machine running Molecule: every probe below
-  # runs inside this container, against the loopback address the role's own
-  # container publishes on. Publishing to the host only invites collisions
-  # between Molecule runs happening in parallel.
   - name: jellyfin-${MOLECULE_DISTRO:-ubuntu2604}-default
     image: "geerlingguy/docker-${MOLECULE_DISTRO:-ubuntu2604}-ansible:latest"
     command: ${MOLECULE_DOCKER_COMMAND:-""}
