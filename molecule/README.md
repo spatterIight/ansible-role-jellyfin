@@ -47,25 +47,17 @@ Currently there is one testing scenario available.
 
 ### `default`
 
-Installs Jellyfin the way the role would, then checks the running instance rather than the systemd unit:
+Installs Jellyfin the way the role would, then checks the running instance. The main objects of the scenario are as below:
 
-- the unit is active and has not restarted (`Restart=always` keeps a crash-looping unit reported as active, so being active on its own proves very little), and the journal of *this* invocation reports startup completion
-- `/System/Info/Public` answers 200 — while Jellyfin is still coming up it answers every path with a 503 and an HTML splash page, so a web shell rendering is not enough to pass
-- the version it reports equals the `jellyfin_version` literal that Renovate bumps, and the container runs an image tagged with it
-- the published server URL, timezone, additional environment variable, additional volume, extra container argument, device passthrough and container runtime the scenario configures all arrive at the container or the process
-- the first-run wizard is completed, an administrator logs in, and the authenticated API answers — which is how the scenario establishes that the library database on the bind-mounted data path is writable
+- The published server URL, timezone, additional environment variable, additional volume, extra container argument, device passthrough and container runtime the scenario configures all arrive at the container or the process
+- The first-run wizard is completed, an administrator logs in, and the authenticated API answers in order to confirm the mounted data path is writable
 - Jellyfin is asked to list the media path and the additional volume back through its own API, so a mount that docker accepted but the process cannot see does not pass
-- the service is restarted (the unit creates its container with `--rm`, so the container is destroyed and recreated) and the completed wizard has to still be there
 
-Every claim above is also put to a second container: the same image, started with none of the role's environment file, labels or bind mounts. It must fail the claims the role's instance passes, otherwise the claim is not evidence of anything.
+#### What this scenario does not cover
 
-#### What this scenario cannot cover
-
-**Hardware transcoding.** `jellyfin_gpu_path` / `jellyfin_gpu_bind_path` exist to hand a GPU (`/dev/dri`) to the container, and `jellyfin_container_runtime` / `jellyfin_nvidia_visible_devices` exist to do the NVIDIA equivalent. A CI runner has neither a GPU nor the NVIDIA container toolkit. The scenario therefore exercises these settings only up to the boundary that CI can reach: it passes through a device that does exist (`/dev/null`) and selects the runtime that is always installed (`runc`), and asserts that both arrive in the container's definition. That the role can *ask* docker for a device and a runtime is checked. That Jellyfin then transcodes on that hardware is not, and cannot be here.
-
-**Media playback.** No media is placed in the library and no library scan is run. The media path is checked for reaching the process, not for being usable as a library.
-
-**The first-run wizard as a security boundary.** The scenario completes the wizard itself. On a real deployment the wizard is open to anonymous callers from the moment the service starts until somebody completes it, which the scenario demonstrates against the unconfigured control container rather than papering over.
+- **Hardware transcoding**: `jellyfin_gpu_path` / `jellyfin_gpu_bind_path` exist to hand a GPU (`/dev/dri`) to the container, and `jellyfin_container_runtime` / `jellyfin_nvidia_visible_devices` exist to do the NVIDIA equivalent. The GitHub CI runner happens to have neither a GPU nor the NVIDIA container toolkit. The scenario therefore exercises these settings only up to the boundary that GitHub can currently reach: it passes through a device that does exist (`/dev/null`) and selects the runtime that is always installed (`runc`), and asserts that both arrive in the container's definition.
+- **Media playback**: No media is placed in the library and no library scan is run.
+- **The first-run wizard as a security boundary**: The scenario completes the wizard itself. On a real deployment the wizard is open to anonymous callers from the moment the service starts until somebody completes it, which the scenario demonstrates against the unconfigured control container rather than papering over.
 
 ## Running
 
