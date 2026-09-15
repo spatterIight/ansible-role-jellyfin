@@ -5,7 +5,7 @@
     "The rule below is what keeps Renovate pointed at Jellyfin at all: LinuxServer publishes 12458 tags for this image, and while strict semver already discards the arch-prefixed and -lsNN flavours, it still accepts the date-based tags the image carried in 2020-2021. Those sort above every real 10.x release."
   ],
   "extends": [
-    "github>mother-of-all-self-hosting/renovate-config#v1.0.0"
+    "github>mother-of-all-self-hosting/renovate-config#v1.1.0"
   ],
   "packageRules": [
     {
