@@ -46,8 +46,6 @@ After completing the wizard, you can safely disable it by adding the following c
 jellyfin_container_labels_traefik_middleware_basic_auth_enabled: false
 ```
 
-#### Configuring HTTP Basic authentication
-
 ## Development
 
 ### pre-commit
