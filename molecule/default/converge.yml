@@ -1,3 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2026 spatterlight
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
@@ -24,6 +25,14 @@
   become: true
   gather_facts: false
   tasks:
+    # The role creates the media path; the marker goes in afterwards so that
+    # Jellyfin can be asked to list it back out of the running container.
+    - name: Ensure a marker file exists in the Jellyfin media path
+      ansible.builtin.copy:
+        content: "media path reached the process\n"
+        dest: "/jellyfin/media/{{ jellyfin_molecule_marker_filename }}"
+        mode: "0644"
+
     - name: Ensure systemd daemon is reloaded
       ansible.builtin.systemd_service:
         daemon_reload: true

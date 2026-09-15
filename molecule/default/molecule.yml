@@ -1,4 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -19,8 +21,6 @@ platforms:
     cgroupns_mode: host
     privileged: true
     pre_build_image: true
-    published_ports:
-      - 127.0.0.1:8096:8096
 provisioner:
   name: ansible
   config_options:
@@ -31,11 +31,87 @@ provisioner:
       all:
         # Helper variables
         jellyfin_debug_service_enabled: false
+        jellyfin_restarts_check_enabled: true
+
+        # The container and network names the role derives from its identifier.
+        # Role defaults are not in scope in a verify play, so they are spelled out.
+        jellyfin_molecule_container: jellyfin
+        jellyfin_molecule_network: jellyfin
+
+        # An unconfigured Jellyfin from the very same image, started by the
+        # verification with none of the role's environment file, labels or bind
+        # mounts. Claims the scenario makes about the role are also put to this
+        # container, which must not be able to satisfy them.
+        jellyfin_molecule_control_container: jellyfin-molecule-control
+        jellyfin_molecule_control_bind_port: 18096
+
+        # Jellyfin's first-run wizard is open to anonymous callers until it is
+        # completed. The verification completes it, which is both how it gets an
+        # access token to reach the authenticated API with, and how it proves
+        # that the library database on the role's bind mount is writable.
+        jellyfin_molecule_admin_username: molecule-admin
+        jellyfin_molecule_admin_password: molecule-admin-password
+
+        # Files placed on the host under the paths the role bind-mounts. Jellyfin
+        # itself is asked to list them back, so a mount that docker accepted but
+        # the process cannot see does not pass.
+        jellyfin_molecule_marker_filename: jellyfin-molecule-marker.txt
 
         # Variables for Jellyfin
-        jellyfin_hostname: localhost
-        jellyfin_container_labels_traefik_enabled: false
-        jellyfin_container_http_bind_port: 8096
+        jellyfin_hostname: jellyfin.molecule.local
+
+        # Deliberately not the role's default of `/`, so that the path-prefix
+        # branches of templates/labels.j2 (the slashless redirect and the prefix
+        # stripping middleware) are rendered rather than skipped.
+        jellyfin_path_prefix: /jellyfin
+
+        # Traefik is not running here, and does not need to be: the labels are
+        # written to a file the container carries, and are read back off the
+        # container. What is being checked is that the role emits them, with the
+        # values it was given, and only when it was asked to.
+        jellyfin_container_labels_traefik_enabled: true
+        jellyfin_container_labels_traefik_entrypoints: web-secure
+
+        # Published on the platform container's loopback so the probes can reach it.
+        jellyfin_container_http_bind_port: 127.0.0.1:8096
+
+        # Reaches the process only through `TZ` in the rendered environment file.
+        # UTC+14 has no other way of turning up: the platform container is UTC.
+        jellyfin_timezone: Pacific/Kiritimati
+
+        # Reaches the process only through `JELLYFIN_PublishedServerUrl` in the
+        # rendered environment file, and comes back out of the unauthenticated
+        # /System/Info/Public endpoint as `LocalAddress`. A stock container
+        # reports its own listening address there instead.
+        jellyfin_published_server_url: http://jellyfin.molecule.invalid:8096
+
+        # `runc` is the runtime docker would have used anyway, so this changes
+        # nothing about how the container runs - it exists to render the
+        # `--runtime` branch of the systemd unit, which is otherwise only ever
+        # rendered on a machine with an NVIDIA GPU.
+        jellyfin_container_runtime: runc
+
+        # Device passthrough, exercised up to the boundary CI allows: a runner
+        # has no /dev/dri, so a device that does exist is passed through instead.
+        # See molecule/README.md for what this does and does not prove.
+        jellyfin_gpu_path: /dev/null
+        jellyfin_gpu_bind_path: /dev/jellyfin-molecule-gpu
+
+        jellyfin_media_bind_path: /media
+
+        jellyfin_container_labels_traefik_middleware_basic_auth_enabled: false
+
+        jellyfin_container_additional_volumes:
+          - type: bind
+            src: /jellyfin-molecule-extra
+            dst: /jellyfin-molecule-extra
+            options: readonly
+
+        jellyfin_container_extra_arguments:
+          - --label=jellyfin.molecule.extra-argument=applied
+
+        jellyfin_environment_variables_additional_variables: |
+          JELLYFIN_MOLECULE_MARKER=applied
   env:
     # Workaround for https://github.com/ansible/molecule/issues/4391
     ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/..:/.ansible/roles:/usr/share/ansible/roles:/etc/ansible/roles:~/.ansible/roles

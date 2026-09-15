@@ -1,56 +1,18 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "Patch releases of Jellyfin are deliberately not automerged: v10.11.10 was a patch that added two EF Core schema migrations (AddNormalizedUsername, AddUniqueNormalizedUsernameIndex) plus a data routine, and Jellyfin applies those forward-only against the operator's library database on the next restart. A Molecule run that installs a fresh Jellyfin structurally cannot see that risk, so every version bump here stays a reviewed pull request.",
+    "The rule below is what keeps Renovate pointed at Jellyfin at all: LinuxServer publishes 12458 tags for this image, and while strict semver already discards the arch-prefixed and -lsNN flavours, it still accepts the date-based tags the image carried in 2020-2021. Those sort above every real 10.x release."
+  ],
   "extends": [
-    "config:best-practices",
-    ":automergeAll",
-    ":automergeBranch",
-    ":semanticCommitsDisabled"
+    "github>mother-of-all-self-hosting/renovate-config#v1.0.0"
   ],
-  "ignorePresets": [
-    "docker:pinDigests",
-    ":maintainLockFilesWeekly"
-  ],
-  "labels": [
-    "dependencies"
-  ],
-  "ansible-galaxy": {
-    "ignoreUnstable": false,
-    "versioning": "loose"
-  },
-  "pre-commit": {
-    "enabled": true
-  },
-  "regex": {
-    "automerge": false
-  },
   "packageRules": [
     {
-      "matchManagers": ["github-actions"],
-      "commitBody": "[skip ci]",
-      "schedule": ["* * 1-7 */6 *"],
-      "automergeSchedule": ["* * 1-14 */6 *"],
-      "groupName": "GitHub Actions dependencies"
-    },
-    {
-      "matchManagers": ["mise", "pip_requirements", "pre-commit", "pyenv"],
-      "schedule": ["* * 1-7 */6 *"],
-      "automergeSchedule": ["* * 1-14 */6 *"]
-    },
-    {
-      "description": "Ignore old date-based versioning scheme (YYYY.MM.DD format)",
-      "matchFileNames": ["/defaults/main.yml"],
-      "allowedVersions": "!/^20[0-9]{2}\\.[0-9]{1,2}\\.[0-9]{1,2}$/"
-    }
-  ],
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "/defaults/main.yml$/"
-      ],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>[a-z-.]+?) depName=(?<depName>[^\\s]+?)(?: (?:lookupName|packageName)=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[a-z-0-9]+?))?\\s+[A-Za-z0-9_]+?(?:_version|_tag)\\s*:\\s*[\"']?(?<currentValue>.+?)[\"']?\\s"
-      ]
+      "description": "Ignore the date-based versioning scheme (YYYY.MM.DD) this image used until December 2021; without this, 2021.12.16 outranks every real Jellyfin release",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["lscr.io/linuxserver/jellyfin"],
+      "allowedVersions": "!/^20[0-9]{2}\\./"
     }
   ]
 }

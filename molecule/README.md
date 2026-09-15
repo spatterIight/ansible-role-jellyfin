@@ -47,7 +47,17 @@ Currently there is one testing scenario available.
 
 ### `default`
 
-Tests a standard Jellyfin installation.
+Installs Jellyfin the way the role would, then checks the running instance. The main objects of the scenario are as below:
+
+- The published server URL, timezone, additional environment variable, additional volume, extra container argument, device passthrough and container runtime the scenario configures all arrive at the container or the process
+- The first-run wizard is completed, an administrator logs in, and the authenticated API answers in order to confirm the mounted data path is writable
+- Jellyfin is asked to list the media path and the additional volume back through its own API, so a mount that docker accepted but the process cannot see does not pass
+
+#### What this scenario does not cover
+
+- **Hardware transcoding**: `jellyfin_gpu_path` / `jellyfin_gpu_bind_path` exist to hand a GPU (`/dev/dri`) to the container, and `jellyfin_container_runtime` / `jellyfin_nvidia_visible_devices` exist to do the NVIDIA equivalent. The GitHub CI runner happens to have neither a GPU nor the NVIDIA container toolkit. The scenario therefore exercises these settings only up to the boundary that GitHub can currently reach: it passes through a device that does exist (`/dev/null`) and selects the runtime that is always installed (`runc`), and asserts that both arrive in the container's definition.
+- **Media playback**: No media is placed in the library and no library scan is run.
+- **The first-run wizard as a security boundary**: The scenario completes the wizard itself. On a real deployment the wizard is open to anonymous callers from the moment the service starts until somebody completes it, which the scenario demonstrates against the unconfigured control container rather than papering over.
 
 ## Running
 

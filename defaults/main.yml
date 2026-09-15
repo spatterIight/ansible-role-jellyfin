@@ -117,7 +117,15 @@ jellyfin_container_network_deletion_enabled: true
 # For information on all the ports Jellyfin may use, and what they do, see the below docs
 # https://github.com/linuxserver/docker-jellyfin#optional-parameters
 
-# The port Jellyfin is serving the HTTP web application on inside the container
+# The port Jellyfin is serving the HTTP web application on inside the container.
+#
+# This describes the image rather than configuring it. Jellyfin takes its
+# listening port from `InternalHttpPort` in `{{ jellyfin_data_path }}/network.xml`,
+# which it writes itself and which this role does not template, and the
+# LinuxServer image exposes no environment variable for it. Changing this value
+# alone therefore does not move the port Jellyfin listens on - it only changes
+# where the port publishing below and the Traefik label point, both of which
+# would then point at nothing.
 jellyfin_container_http_port: 8096
 
 # Controls whether the container exposes the HTTP port
@@ -152,6 +160,9 @@ jellyfin_container_labels_traefik_priority: 0
 jellyfin_container_labels_traefik_entrypoints: web-secure
 jellyfin_container_labels_traefik_tls: "{{ jellyfin_container_labels_traefik_entrypoints != 'web' }}"
 jellyfin_container_labels_traefik_tls_certResolver: default  # noqa var-naming
+jellyfin_container_labels_traefik_middleware_basic_auth_enabled: true
+# See: https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/basicauth/
+jellyfin_container_labels_traefik_middleware_basic_auth_users: ""
 
 # jellyfin_container_labels_additional_labels contains a multiline string with additional labels to add to the container label file.
 # See `../templates/labels.j2` for details.

@@ -1,3 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2026 spatterlight
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
@@ -18,6 +19,9 @@
       ansible.builtin.package:
         name:
           - python3-requests
+          # The storage driver docker is pointed at below. Without the binary,
+          # dockerd falls back to vfs without saying much about it.
+          - fuse-overlayfs
         state: present
 
     - name: Ensure Docker is installed for Jellyfin Molecule tests preparation
@@ -25,4 +29,23 @@
         name: ansible-role-docker
       vars:
         docker_daemon_options:
-          storage-driver: vfs
+          # `vfs` makes a full copy of every layer. The Jellyfin image is large
+          # enough for that to dominate the run - `fuse-overlayfs` gives the same
+          # nested-container isolation without the copying.
+          storage-driver: fuse-overlayfs
+
+    # The role bind-mounts this path but, unlike its own data and media paths,
+    # does not create it. `--mount type=bind` refuses to start a container whose
+    # source path is missing, so this doubles as a check that the role really
+    # passes the additional volumes to `docker create`.
+    - name: Ensure the Jellyfin Molecule additional volume source exists
+      ansible.builtin.file:
+        path: /jellyfin-molecule-extra
+        state: directory
+        mode: "0755"
+
+    - name: Ensure a marker file exists in the Jellyfin Molecule additional volume
+      ansible.builtin.copy:
+        content: "additional volume reached the process\n"
+        dest: "/jellyfin-molecule-extra/{{ jellyfin_molecule_marker_filename }}"
+        mode: "0644"
