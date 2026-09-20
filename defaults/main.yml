@@ -167,6 +167,12 @@ jellyfin_container_extra_arguments: "{{ jellyfin_container_extra_arguments_auto 
 jellyfin_container_extra_arguments_auto: []
 jellyfin_container_extra_arguments_custom: []
 
+# A list of extra arguments to pass to the process inside the container
+# Example: ['--SOME_ARGUMENT']
+jellyfin_process_extra_arguments: "{{ jellyfin_process_extra_arguments_auto + jellyfin_process_extra_arguments_custom }}"
+jellyfin_process_extra_arguments_auto: []
+jellyfin_process_extra_arguments_custom: []
+
 # Specifies the value of the `X-XSS-Protection` header
 # Stops pages from loading when they detect reflected cross-site scripting (XSS) attacks.
 #
