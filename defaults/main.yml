@@ -130,6 +130,26 @@ jellyfin_container_labels_traefik_middleware_basic_auth_enabled: true
 # See: https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/basicauth/
 jellyfin_container_labels_traefik_middleware_basic_auth_users: ""
 
+# Controls which additional headers to attach to all HTTP requests.
+# To add your own custom request headers, use `jellyfin_container_labels_traefik_additional_request_headers_custom`
+jellyfin_container_labels_traefik_additional_request_headers: "{{ jellyfin_container_labels_traefik_additional_request_headers_auto | combine(jellyfin_container_labels_traefik_additional_request_headers_custom) }}"
+jellyfin_container_labels_traefik_additional_request_headers_auto: {}
+jellyfin_container_labels_traefik_additional_request_headers_custom: {}
+
+# Controls which additional headers to attach to all HTTP responses.
+# To add your own custom response headers, use `jellyfin_container_labels_traefik_additional_response_headers_custom`
+jellyfin_container_labels_traefik_additional_response_headers: "{{ jellyfin_container_labels_traefik_additional_response_headers_auto | combine(jellyfin_container_labels_traefik_additional_response_headers_custom) }}"
+jellyfin_container_labels_traefik_additional_response_headers_auto: |
+  {{
+    {}
+    | combine ({'X-XSS-Protection': jellyfin_http_header_xss_protection} if jellyfin_http_header_xss_protection else {})
+    | combine ({'X-Content-Type-Options': jellyfin_http_header_content_type_options} if jellyfin_http_header_content_type_options else {})
+    | combine ({'Content-Security-Policy': jellyfin_http_header_content_security_policy} if jellyfin_http_header_content_security_policy else {})
+    | combine ({'Permissions-Policy': jellyfin_http_header_permissions_policy} if jellyfin_http_header_permissions_policy else {})
+    | combine ({'Strict-Transport-Security': jellyfin_http_header_strict_transport_security} if jellyfin_http_header_strict_transport_security and jellyfin_container_labels_traefik_tls else {})
+  }}
+jellyfin_container_labels_traefik_additional_response_headers_custom: {}
+
 # jellyfin_container_labels_additional_labels contains a multiline string with additional labels to add to the container label file.
 # See `../templates/labels.j2` for details.
 # To add your own custom labels, use `jellyfin_container_labels_additional_labels_custom`
@@ -146,6 +166,53 @@ jellyfin_container_labels_additional_labels_custom: []
 jellyfin_container_extra_arguments: "{{ jellyfin_container_extra_arguments_auto + jellyfin_container_extra_arguments_custom }}"
 jellyfin_container_extra_arguments_auto: []
 jellyfin_container_extra_arguments_custom: []
+
+# Specifies the value of the `X-XSS-Protection` header
+# Stops pages from loading when they detect reflected cross-site scripting (XSS) attacks.
+#
+# Learn more about it is here:
+# - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-XSS-Protection
+# - https://portswigger.net/web-security/cross-site-scripting/reflected
+jellyfin_http_header_xss_protection: "1; mode=block"
+
+# Specifies the value of the `X-Content-Type-Options` header.
+# See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Content-Type-Options
+jellyfin_http_header_content_type_options: nosniff
+
+# Specifies the value of the `Content-Security-Policy` header.
+# See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy
+jellyfin_http_header_content_security_policy: frame-ancestors 'self'
+
+# Specifies the value of the `Permissions-Policy` header.
+# See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Permissions-Policy
+jellyfin_http_header_permissions_policy: "{{ 'interest-cohort=()' if jellyfin_floc_optout_enabled else '' }}"
+
+# Specifies the value of the `Strict-Transport-Security` header.
+# See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
+jellyfin_http_header_strict_transport_security: "max-age=31536000; includeSubDomains{{ '; preload' if jellyfin_hsts_preload_enabled else '' }}"
+
+# Controls whether to send a "Permissions-Policy interest-cohort=();" header along with all responses
+#
+# Learn more about what it is here:
+# - https://www.eff.org/deeplinks/2021/03/googles-floc-terrible-idea
+# - https://paramdeo.com/blog/opting-your-website-out-of-googles-floc-network
+# - https://amifloced.org/
+#
+# Of course, a better solution is to just stop using browsers (like Chrome), which participate in such tracking practices.
+# See: `jellyfin_http_header_permissions_policy`
+jellyfin_floc_optout_enabled: true
+
+# Controls if HSTS preloading is enabled
+#
+# In its strongest and recommended form, the [HSTS policy](https://www.chromium.org/hsts) includes all subdomains, and
+# indicates a willingness to be "preloaded" into browsers:
+# `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`
+# For more information visit:
+# - https://en.wikipedia.org/wiki/HTTP_Strict_Transport_Security
+# - https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security
+# - https://hstspreload.org/#opt-in
+# See: `jellyfin_http_header_strict_transport_security`
+jellyfin_hsts_preload_enabled: false
 
 # List of systemd services that the Jellyfin systemd service depends on
 jellyfin_systemd_required_services_list: "{{ (jellyfin_systemd_required_services_list_default + jellyfin_systemd_required_services_list_auto + jellyfin_systemd_required_services_list_custom) | unique }}"
