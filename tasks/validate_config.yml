@@ -35,6 +35,13 @@
 - name: Validate Jellyfin Traefik configuration
   when: jellyfin_container_labels_traefik_enabled | bool
   block:
+    - name: (Deprecation) Catch and report Jellyfin labels for Traefik in the old string format
+      ansible.builtin.fail:
+        msg: >-
+          `jellyfin_container_labels_additional_labels` now require a list of strings.
+          Replace `jellyfin_container_labels_additional_labels: |` with `jellyfin_container_labels_additional_labels_custom:` and make each label a list item.
+      when: "jellyfin_container_labels_additional_labels | default([]) is string"
+
     - name: Fail if required Jellyfin Traefik settings not defined
       ansible.builtin.fail:
         msg: >-

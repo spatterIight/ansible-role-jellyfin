@@ -49,4 +49,6 @@ traefik.http.routers.{{ jellyfin_identifier }}.tls.certResolver={{ jellyfin_cont
 traefik.http.services.{{ jellyfin_identifier }}.loadbalancer.server.port={{ jellyfin_container_http_port }}
 {% endif %}
 
-{{ jellyfin_container_labels_additional_labels }}
+{% for arg in jellyfin_container_labels_additional_labels %}
+{{ arg }}
+{% endfor %}

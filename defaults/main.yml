@@ -112,7 +112,10 @@ jellyfin_container_additional_volumes: "{{ jellyfin_container_additional_volumes
 jellyfin_container_additional_volumes_auto: []
 jellyfin_container_additional_volumes_custom: []
 
-# To inject your own other container labels, see `jellyfin_container_labels_additional_labels`.
+# jellyfin_container_labels_traefik_enabled controls whether labels to assist a Traefik reverse-proxy will be attached to the container.
+# See `../templates/labels.j2` for details.
+#
+# To inject your own other container labels, see `jellyfin_container_labels_additional_labels_custom`.
 jellyfin_container_labels_traefik_enabled: true
 jellyfin_container_labels_traefik_docker_network: "{{ jellyfin_container_network }}"
 jellyfin_container_labels_traefik_hostname: "{{ jellyfin_hostname }}"
@@ -129,12 +132,15 @@ jellyfin_container_labels_traefik_middleware_basic_auth_users: ""
 
 # jellyfin_container_labels_additional_labels contains a multiline string with additional labels to add to the container label file.
 # See `../templates/labels.j2` for details.
+# To add your own custom labels, use `jellyfin_container_labels_additional_labels_custom`
 #
 # Example:
-# jellyfin_container_labels_additional_labels: |
-#   my.label=1
-#   another.label="here"
-jellyfin_container_labels_additional_labels: ""
+# jellyfin_container_labels_additional_labels_custom:
+#   - my.label=1
+#   - another.label="here"
+jellyfin_container_labels_additional_labels: "{{ jellyfin_container_labels_additional_labels_auto + jellyfin_container_labels_additional_labels_custom }}"
+jellyfin_container_labels_additional_labels_auto: []
+jellyfin_container_labels_additional_labels_custom: []
 
 # List of systemd services that the Jellyfin systemd service depends on
 jellyfin_systemd_required_services_list: "{{ (jellyfin_systemd_required_services_list_default + jellyfin_systemd_required_services_list_auto + jellyfin_systemd_required_services_list_custom) | unique }}"
