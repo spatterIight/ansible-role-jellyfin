@@ -73,7 +73,7 @@ provisioner:
         jellyfin_container_labels_traefik_entrypoints: web-secure
 
         # Published on the platform container's loopback so the probes can reach it.
-        jellyfin_container_http_bind_port: 127.0.0.1:8096
+        jellyfin_container_http_host_bind_port: 127.0.0.1:8096
 
         # Reaches the process only through `TZ` in the rendered environment file.
         # UTC+14 has no other way of turning up: the platform container is UTC.

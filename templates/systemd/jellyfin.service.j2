@@ -40,8 +40,8 @@ ExecStartPre={{ devture_systemd_docker_base_host_command_docker }} create \
 			--read-only \
 			{% endif %}
 			--network={{ jellyfin_container_network }} \
-			{% if jellyfin_container_http_bind_port %}
-			-p {{ jellyfin_container_http_bind_port }}:{{ jellyfin_container_http_port }} \
+			{% if jellyfin_container_http_host_bind_port %}
+			-p {{ jellyfin_container_http_host_bind_port }}:{{ jellyfin_container_http_port }} \
 			{% endif %}
 			{% if jellyfin_container_service_discover_bind_port %}
 			-p {{ jellyfin_container_service_discover_bind_port }}:{{ jellyfin_container_service_discover_port }}/udp \
