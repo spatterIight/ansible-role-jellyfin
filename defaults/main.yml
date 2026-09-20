@@ -24,6 +24,15 @@ jellyfin_media_path: "{{ jellyfin_base_path }}/media"
 # Takes a path value (e.g. "/media"), or empty string to not mount.
 jellyfin_media_bind_path: ""
 
+# The path where the Intel/AMD GPU is on the host system
+# For NVIDIA GPUs see 'jellyfin_nvidia_visible_devices' and 'jellyfin_container_runtime'
+# https://docs.linuxserver.io/images/docker-jellyfin/#intelatiamd
+jellyfin_gpu_path: "/dev/dri"
+
+# The path to mount the Intel/AMD GPU to in the container.
+# Takes a path value (e.g. "/dev/dri"), or empty string to not mount.
+jellyfin_gpu_bind_path: ""
+
 # renovate: datasource=docker depName=lscr.io/linuxserver/jellyfin versioning=semver
 jellyfin_version: 10.11.11
 jellyfin_arch: amd64
@@ -44,69 +53,11 @@ jellyfin_hostname: ""
 # This value must either be `/` or not end with a slash (e.g. `/jellyfin`).
 jellyfin_path_prefix: /
 
-# Controls whether the container filesystem is read-only
-# Doesn't look like the LinuxServer Jellyfin image supports read only mode
-# If it did it would be documented in a section here:
-# https://docs.linuxserver.io/images/docker-jellyfin
-jellyfin_container_read_only: false
-
-# The path where the Intel/AMD GPU is on the host system
-# For NVIDIA GPUs see 'jellyfin_nvidia_visible_devices' and 'jellyfin_container_runtime'
-# https://docs.linuxserver.io/images/docker-jellyfin/#intelatiamd
-jellyfin_gpu_path: "/dev/dri"
-
-# The path to mount the Intel/AMD GPU to in the container.
-# Takes a path value (e.g. "/dev/dri"), or empty string to not mount.
-jellyfin_gpu_bind_path: ""
-
-# The container runtime that the container engine should use
-# Should be set to 'nvidia' to enable NVIDIA GPU hardware acceleration,
-# NOTE -> Requires that the https://github.com/NVIDIA/nvidia-container-toolkit is installed
-#
-# If blank the default runtime is used
-# https://docs.linuxserver.io/images/docker-jellyfin/#nvidia
-jellyfin_container_runtime: ""
-
-# To enable NVIDIA GPU hardware acceleration this value should either be 'all' or the UUID value of the GPU
-# which can obtained with the command -> 'nvidia-smi --query-gpu=gpu_name,gpu_uuid --format=csv'
-#
-# https://docs.linuxserver.io/images/docker-jellyfin/#nvidia
-jellyfin_nvidia_visible_devices: ""
-
-# A string specifying LinuxServer docker mods to install
-# Example: jellyfin_docker_mods: "linuxserver/mods:jellyfin-opencl-intel|linuxserver/mods:jellyfin-mod2"
-#
-# To discover available mods, see the following link:
-# https://mods.linuxserver.io/?mod=jellyfin
-#
-# This may be especially useful if you are using an intel GPU
-# https://docs.linuxserver.io/images/docker-jellyfin/#intel
-jellyfin_docker_mods: ""
-
 jellyfin_container_image: "{{ jellyfin_container_image_registry_prefix }}linuxserver/jellyfin:{{ jellyfin_container_image_tag }}"
 jellyfin_container_image_tag: "{{ jellyfin_version }}"
 jellyfin_container_image_registry_prefix: "{{ jellyfin_container_image_registry_prefix_upstream }}"
 jellyfin_container_image_registry_prefix_upstream: "{{ jellyfin_container_image_registry_prefix_upstream_default }}"
 jellyfin_container_image_registry_prefix_upstream_default: lscr.io/
-
-# A list of additional container networks that the container would be connected to.
-# The role does not create these networks, so make sure they already exist.
-jellyfin_container_additional_networks: "{{ (jellyfin_container_additional_networks_default + jellyfin_container_additional_networks_auto + jellyfin_container_additional_networks_custom) | unique }}"
-jellyfin_container_additional_networks_default: []
-jellyfin_container_additional_networks_auto: []
-jellyfin_container_additional_networks_custom: []
-
-# List of systemd services that the Jellyfin systemd service depends on
-jellyfin_systemd_required_services_list: "{{ (jellyfin_systemd_required_services_list_default + jellyfin_systemd_required_services_list_auto + jellyfin_systemd_required_services_list_custom) | unique }}"
-jellyfin_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
-jellyfin_systemd_required_services_list_auto: []
-jellyfin_systemd_required_services_list_custom: []
-
-# List of systemd services that the Jellyfin systemd service wants
-jellyfin_systemd_wanted_services_list: "{{ (jellyfin_systemd_wanted_services_list_default + jellyfin_systemd_wanted_services_list_auto + jellyfin_systemd_wanted_services_list_custom) | unique }}"
-jellyfin_systemd_wanted_services_list_default: []
-jellyfin_systemd_wanted_services_list_auto: []
-jellyfin_systemd_wanted_services_list_custom: []
 
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 jellyfin_container_network: "{{ jellyfin_identifier }}"
@@ -116,6 +67,10 @@ jellyfin_container_network_deletion_enabled: true
 
 # For information on all the ports Jellyfin may use, and what they do, see the below docs
 # https://github.com/linuxserver/docker-jellyfin#optional-parameters
+
+# Controls whether the container exposes the HTTP port
+# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:8096"), or empty string to not expose.
+jellyfin_container_http_bind_port: ""
 
 # The port Jellyfin is serving the HTTP web application on inside the container.
 #
@@ -128,26 +83,41 @@ jellyfin_container_network_deletion_enabled: true
 # would then point at nothing.
 jellyfin_container_http_port: 8096
 
-# Controls whether the container exposes the HTTP port
-# Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:8096"), or empty string to not expose.
-jellyfin_container_http_bind_port: ""
-
-# The port Jellyfin is serving service auto-discovery on inside the container
-jellyfin_container_service_discover_port: 1900
-
 # Controls whether the container exposes the 1900 UDP port
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:1900"), or empty string to not expose.
 jellyfin_container_service_discover_bind_port: ""
 
-# The port Jellyfin is serving client auto-discovery on inside the container
-jellyfin_container_client_discover_port: 7359
+# The port Jellyfin is serving service auto-discovery on inside the container
+jellyfin_container_service_discover_port: 1900
 
 # Controls whether the container exposes the 7359 UDP port
 # Takes an "<ip>:<port>" or "<port>" value (e.g. "127.0.0.1:7359"), or empty string to not expose.
 jellyfin_container_client_discover_bind_port: ""
 
-# The server address the client discovery service should respond with
-jellyfin_published_server_url: ""
+# The port Jellyfin is serving client auto-discovery on inside the container
+jellyfin_container_client_discover_port: 7359
+
+# A list of additional container networks that the container would be connected to.
+# The role does not create these networks, so make sure they already exist.
+jellyfin_container_additional_networks: "{{ (jellyfin_container_additional_networks_default + jellyfin_container_additional_networks_auto + jellyfin_container_additional_networks_custom) | unique }}"
+jellyfin_container_additional_networks_default: []
+jellyfin_container_additional_networks_auto: []
+jellyfin_container_additional_networks_custom: []
+
+# A list of additional "volumes" to mount in the container.
+#
+# See the `--mount` documentation for the `docker run` command.
+#
+# Example:
+# jellyfin_container_additional_volumes:
+#   - type: bind
+#     src: /path/on/the/host
+#     dst: /data
+#   - type: bind
+#     src: /another-path/on/the/host
+#     dst: /read-only
+#     options: readonly
+jellyfin_container_additional_volumes: []
 
 # To inject your own other container labels, see `jellyfin_container_labels_additional_labels`.
 jellyfin_container_labels_traefik_enabled: true
@@ -173,20 +143,17 @@ jellyfin_container_labels_traefik_middleware_basic_auth_users: ""
 #   another.label="here"
 jellyfin_container_labels_additional_labels: ""
 
-# A list of additional "volumes" to mount in the container.
-#
-# See the `--mount` documentation for the `docker run` command.
-#
-# Example:
-# jellyfin_container_additional_volumes:
-#   - type: bind
-#     src: /path/on/the/host
-#     dst: /data
-#   - type: bind
-#     src: /another-path/on/the/host
-#     dst: /read-only
-#     options: readonly
-jellyfin_container_additional_volumes: []
+# List of systemd services that the Jellyfin systemd service depends on
+jellyfin_systemd_required_services_list: "{{ (jellyfin_systemd_required_services_list_default + jellyfin_systemd_required_services_list_auto + jellyfin_systemd_required_services_list_custom) | unique }}"
+jellyfin_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
+jellyfin_systemd_required_services_list_auto: []
+jellyfin_systemd_required_services_list_custom: []
+
+# List of systemd services that the Jellyfin systemd service wants
+jellyfin_systemd_wanted_services_list: "{{ (jellyfin_systemd_wanted_services_list_default + jellyfin_systemd_wanted_services_list_auto + jellyfin_systemd_wanted_services_list_custom) | unique }}"
+jellyfin_systemd_wanted_services_list_default: []
+jellyfin_systemd_wanted_services_list_auto: []
+jellyfin_systemd_wanted_services_list_custom: []
 
 # A list of extra arguments to pass to the container
 jellyfin_container_extra_arguments: []
@@ -221,6 +188,39 @@ jellyfin_container_cleanup_command: |
   done;
   echo "Failed to remove stale container {{ jellyfin_identifier }} after {{ jellyfin_container_cleanup_timeout_seconds }} attempts" >&2;
   exit 1
+
+# Controls whether the container filesystem is read-only
+# Doesn't look like the LinuxServer Jellyfin image supports read only mode
+# If it did it would be documented in a section here:
+# https://docs.linuxserver.io/images/docker-jellyfin
+jellyfin_container_read_only: false
+
+# The container runtime that the container engine should use
+# Should be set to 'nvidia' to enable NVIDIA GPU hardware acceleration,
+# NOTE -> Requires that the https://github.com/NVIDIA/nvidia-container-toolkit is installed
+#
+# If blank the default runtime is used
+# https://docs.linuxserver.io/images/docker-jellyfin/#nvidia
+jellyfin_container_runtime: ""
+
+# To enable NVIDIA GPU hardware acceleration this value should either be 'all' or the UUID value of the GPU
+# which can obtained with the command -> 'nvidia-smi --query-gpu=gpu_name,gpu_uuid --format=csv'
+#
+# https://docs.linuxserver.io/images/docker-jellyfin/#nvidia
+jellyfin_nvidia_visible_devices: ""
+
+# A string specifying LinuxServer docker mods to install
+# Example: jellyfin_docker_mods: "linuxserver/mods:jellyfin-opencl-intel|linuxserver/mods:jellyfin-mod2"
+#
+# To discover available mods, see the following link:
+# https://mods.linuxserver.io/?mod=jellyfin
+#
+# This may be especially useful if you are using an intel GPU
+# https://docs.linuxserver.io/images/docker-jellyfin/#intel
+jellyfin_docker_mods: ""
+
+# The server address the client discovery service should respond with
+jellyfin_published_server_url: ""
 
 # Specify the timezone
 jellyfin_timezone: "Etc/UTC"
