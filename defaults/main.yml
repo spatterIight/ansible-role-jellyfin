@@ -108,7 +108,9 @@ jellyfin_container_additional_networks_custom: []
 # if you wish to mount your own files into the container.
 # Contains definition objects like this: `{"type": "bind", "src": "/outside", "dst": "/inside", "options": "readonly"}.
 # See the `--mount` documentation for the `docker run` command.
-jellyfin_container_additional_volumes: []
+jellyfin_container_additional_volumes: "{{ jellyfin_container_additional_volumes_auto + jellyfin_container_additional_volumes_custom }}"
+jellyfin_container_additional_volumes_auto: []
+jellyfin_container_additional_volumes_custom: []
 
 # To inject your own other container labels, see `jellyfin_container_labels_additional_labels`.
 jellyfin_container_labels_traefik_enabled: true
