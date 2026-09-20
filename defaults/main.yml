@@ -8,7 +8,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 ---
-
 # Project source code URL: https://github.com/jellyfin/jellyfin
 
 jellyfin_enabled: true
@@ -33,7 +32,7 @@ jellyfin_gpu_path: "/dev/dri"
 # Takes a path value (e.g. "/dev/dri"), or empty string to not mount.
 jellyfin_gpu_bind_path: ""
 
-# renovate: datasource=docker depName=lscr.io/linuxserver/jellyfin versioning=semver
+# renovate: datasource=docker depName=ghcr.io/linuxserver/jellyfin versioning=semver
 jellyfin_version: 10.11.11
 jellyfin_arch: amd64
 
@@ -57,7 +56,7 @@ jellyfin_container_image: "{{ jellyfin_container_image_registry_prefix }}linuxse
 jellyfin_container_image_tag: "{{ jellyfin_version }}"
 jellyfin_container_image_registry_prefix: "{{ jellyfin_container_image_registry_prefix_upstream }}"
 jellyfin_container_image_registry_prefix_upstream: "{{ jellyfin_container_image_registry_prefix_upstream_default }}"
-jellyfin_container_image_registry_prefix_upstream_default: lscr.io/
+jellyfin_container_image_registry_prefix_upstream_default: ghcr.io/
 
 # The base container network. It will be auto-created by this role if it doesn't exist already.
 jellyfin_container_network: "{{ jellyfin_identifier }}"
