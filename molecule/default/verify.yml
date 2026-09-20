@@ -43,7 +43,7 @@
 
         - name: Parse the Jellyfin container definition
           ansible.builtin.set_fact:
-            jellyfin_container_definition: "{{ (jellyfin_container_raw.stdout | from_json)[0] }}"
+            jellyfin_container: "{{ (jellyfin_container_raw.stdout | from_json)[0] }}"
 
         # ------------------------------------------------------------------
         # The negative control, started first so that it is ready by the time the
@@ -65,7 +65,7 @@
               --name {{ jellyfin_molecule_control_container }}
               --network {{ jellyfin_molecule_network }}
               -p 127.0.0.1:{{ jellyfin_molecule_control_bind_port }}:8096
-              {{ jellyfin_container_definition.Config.Image }}
+              {{ jellyfin_container.Config.Image }}
           changed_when: true
 
         # ------------------------------------------------------------------
@@ -161,7 +161,7 @@
           ansible.builtin.assert:
             that:
               - jellyfin_public_info.json.Version == jellyfin_defaults.jellyfin_version
-              - jellyfin_container_definition.Config.Image is search(':' ~ jellyfin_defaults.jellyfin_version ~ '$')
+              - jellyfin_container.Config.Image is search(':' ~ jellyfin_defaults.jellyfin_version ~ '$')
             fail_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
             success_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version }}"
 
@@ -379,44 +379,44 @@
         # ------------------------------------------------------------------
         - name: Assert the container runtime the role was given was passed through
           ansible.builtin.assert:
-            that: jellyfin_container_definition.HostConfig.Runtime == jellyfin_container_runtime
+            that: jellyfin_container.HostConfig.Runtime == jellyfin_container_runtime
             fail_msg: >-
               The container runs under runtime
-              '{{ jellyfin_container_definition.HostConfig.Runtime }}', not
+              '{{ jellyfin_container.HostConfig.Runtime }}', not
               '{{ jellyfin_container_runtime }}'
             success_msg: "The container runs under the configured '{{ jellyfin_container_runtime }}' runtime"
 
         - name: Assert the configured device was passed through to the container
           ansible.builtin.assert:
             that: >-
-              jellyfin_container_definition.HostConfig.Devices | default([], true)
+              jellyfin_container.HostConfig.Devices | default([], true)
               | selectattr('PathOnHost', 'equalto', jellyfin_gpu_path)
               | selectattr('PathInContainer', 'equalto', jellyfin_gpu_bind_path)
               | list | length == 1
             fail_msg: >-
               {{ jellyfin_gpu_path }} was not passed through as {{ jellyfin_gpu_bind_path }};
-              devices seen: {{ jellyfin_container_definition.HostConfig.Devices }}
+              devices seen: {{ jellyfin_container.HostConfig.Devices }}
             success_msg: "{{ jellyfin_gpu_path }} is passed through as {{ jellyfin_gpu_bind_path }}"
 
         - name: Assert the HTTP port the role publishes is the one the container listens on
           ansible.builtin.assert:
             that:
-              - ((jellyfin_defaults.jellyfin_container_http_port | string) ~ '/tcp') in jellyfin_container_definition.NetworkSettings.Ports
-              - jellyfin_container_definition.HostConfig.NetworkMode == jellyfin_molecule_network
+              - ((jellyfin_defaults.jellyfin_container_http_port | string) ~ '/tcp') in jellyfin_container.NetworkSettings.Ports
+              - jellyfin_container.HostConfig.NetworkMode == jellyfin_molecule_network
             fail_msg: >-
               The container does not publish {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp;
-              published: {{ jellyfin_container_definition.NetworkSettings.Ports.keys() | list }}
+              published: {{ jellyfin_container.NetworkSettings.Ports.keys() | list }}
             success_msg: "The container publishes {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp on the {{ jellyfin_molecule_network }} network"
 
         - name: Assert the extra container argument reached docker
           ansible.builtin.assert:
-            that: jellyfin_container_definition.Config.Labels['jellyfin.molecule.extra-argument'] | default('') == 'applied'
+            that: jellyfin_container.Config.Labels['jellyfin.molecule.extra-argument'] | default('') == 'applied'
             fail_msg: "jellyfin_container_extra_arguments did not reach the docker command line"
             success_msg: "jellyfin_container_extra_arguments reaches the docker command line"
 
         - name: Assert the additional environment variable reached the container
           ansible.builtin.assert:
-            that: "'JELLYFIN_MOLECULE_MARKER=applied' in jellyfin_container_definition.Config.Env"
+            that: "'JELLYFIN_MOLECULE_MARKER=applied' in jellyfin_container.Config.Env"
             fail_msg: "jellyfin_environment_variables_additional_variables did not reach the container environment"
             success_msg: "jellyfin_environment_variables_additional_variables reaches the container environment"
 
@@ -428,17 +428,17 @@
         - name: Assert the Traefik labels carry the configured routing
           ansible.builtin.assert:
             that:
-              - jellyfin_container_definition.Config.Labels['traefik.enable'] == 'true'
+              - jellyfin_container.Config.Labels['traefik.enable'] == 'true'
               - >-
-                jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.rule']
+                jellyfin_container.Config.Labels['traefik.http.routers.jellyfin.rule']
                 == 'Host(`' ~ jellyfin_hostname ~ '`) && PathPrefix(`' ~ jellyfin_path_prefix ~ '`)'
-              - jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.entrypoints'] == jellyfin_container_labels_traefik_entrypoints
-              - jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.tls'] == 'true'
-              - jellyfin_container_definition.Config.Labels['traefik.http.middlewares.jellyfin-strip-prefix.stripprefix.prefixes'] == jellyfin_path_prefix
+              - jellyfin_container.Config.Labels['traefik.http.routers.jellyfin.entrypoints'] == jellyfin_container_labels_traefik_entrypoints
+              - jellyfin_container.Config.Labels['traefik.http.routers.jellyfin.tls'] == 'true'
+              - jellyfin_container.Config.Labels['traefik.http.middlewares.jellyfin-strip-prefix.stripprefix.prefixes'] == jellyfin_path_prefix
               - >-
-                jellyfin_container_definition.Config.Labels['traefik.http.services.jellyfin.loadbalancer.server.port']
+                jellyfin_container.Config.Labels['traefik.http.services.jellyfin.loadbalancer.server.port']
                 == (jellyfin_defaults.jellyfin_container_http_port | string)
-            fail_msg: "The Traefik labels do not match the role's configuration: {{ jellyfin_container_definition.Config.Labels }}"
+            fail_msg: "The Traefik labels do not match the role's configuration: {{ jellyfin_container.Config.Labels }}"
             success_msg: "The Traefik labels match the role's configuration"
 
         # ------------------------------------------------------------------
@@ -638,7 +638,7 @@
               - "Jellyfin systemd: {% for unit, state in jellyfin_verify_units | zip(jellyfin_services.results | map(attribute='status.ActiveState')) %}{{ unit }} ({{ state }}){% if not loop.last %}, {% endif %}{% endfor %}"
               - "Jellyfin restarts: {% for unit, restarts in jellyfin_verify_units | zip(jellyfin_restarts_after.results | map(attribute='status.NRestarts')) %}{{ restarts }} ({{ unit }}){% if not loop.last %}, {% endif %}{% endfor %}"
               - "Jellyfin version: {{ jellyfin_public_info.json.Version }}"
-              - "Jellyfin image: {{ jellyfin_container_definition.Config.Image }}"
+              - "Jellyfin image: {{ jellyfin_container.Config.Image }}"
               - "Jellyfin published server URL: {{ jellyfin_public_info.json.LocalAddress }}"
               - "Jellyfin timezone offset: {{ jellyfin_container_timezone.stdout | trim }}"
 
