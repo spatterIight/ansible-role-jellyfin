@@ -297,7 +297,7 @@ jellyfin_docker_mods: ""
 jellyfin_published_server_url: ""
 
 # Specify the timezone
-jellyfin_timezone: "Etc/UTC"
+jellyfin_environment_variables_tz: "Etc/UTC"
 
 # jellyfin_environment_variables_additional_variables contains a multiline string with additional environment variables to pass to the container.
 #

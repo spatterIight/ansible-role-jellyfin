@@ -487,8 +487,8 @@
             that: jellyfin_container_timezone.stdout | trim == '+1400'
             fail_msg: >-
               The container reports UTC offset {{ jellyfin_container_timezone.stdout | trim }};
-              jellyfin_timezone ({{ jellyfin_timezone }}) did not reach it
-            success_msg: "The container runs on the configured {{ jellyfin_timezone }}"
+              jellyfin_environment_variables_tz ({{ jellyfin_environment_variables_tz }}) did not reach it
+            success_msg: "The container runs on the configured {{ jellyfin_environment_variables_tz }}"
 
         # ------------------------------------------------------------------
         # The negative control, which was started at the top of this play.

@@ -77,7 +77,7 @@ provisioner:
 
         # Reaches the process only through `TZ` in the rendered environment file.
         # UTC+14 has no other way of turning up: the platform container is UTC.
-        jellyfin_timezone: Pacific/Kiritimati
+        jellyfin_environment_variables_tz: Pacific/Kiritimati
 
         # Reaches the process only through `JELLYFIN_PublishedServerUrl` in the
         # rendered environment file, and comes back out of the unauthenticated
