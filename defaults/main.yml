@@ -142,6 +142,11 @@ jellyfin_container_labels_additional_labels: "{{ jellyfin_container_labels_addit
 jellyfin_container_labels_additional_labels_auto: []
 jellyfin_container_labels_additional_labels_custom: []
 
+# A list of extra arguments to pass to the container (`docker create` command)
+jellyfin_container_extra_arguments: "{{ jellyfin_container_extra_arguments_auto + jellyfin_container_extra_arguments_custom }}"
+jellyfin_container_extra_arguments_auto: []
+jellyfin_container_extra_arguments_custom: []
+
 # List of systemd services that the Jellyfin systemd service depends on
 jellyfin_systemd_required_services_list: "{{ (jellyfin_systemd_required_services_list_default + jellyfin_systemd_required_services_list_auto + jellyfin_systemd_required_services_list_custom) | unique }}"
 jellyfin_systemd_required_services_list_default: "{{ [devture_systemd_docker_base_docker_service_name] if devture_systemd_docker_base_docker_service_name else [] }}"
@@ -153,9 +158,6 @@ jellyfin_systemd_wanted_services_list: "{{ (jellyfin_systemd_wanted_services_lis
 jellyfin_systemd_wanted_services_list_default: []
 jellyfin_systemd_wanted_services_list_auto: []
 jellyfin_systemd_wanted_services_list_custom: []
-
-# A list of extra arguments to pass to the container
-jellyfin_container_extra_arguments: []
 
 # Controls how long to wait for the container to stop gracefully before killing it.
 jellyfin_container_stop_grace_time_seconds: "{{ devture_systemd_docker_base_container_stop_grace_time_seconds }}"
