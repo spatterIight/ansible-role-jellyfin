@@ -46,6 +46,11 @@
             file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
             name: jellyfin_defaults
 
+        # ------------------------------------------------------------------
+        # The negative control, started first so that it boots alongside the
+        # assertions below rather than after them
+        # ------------------------------------------------------------------
+
         - name: Read the Jellyfin container definition
           ansible.builtin.command:
             cmd: "docker container inspect {{ jellyfin_molecule_container }}"
@@ -56,12 +61,6 @@
           ansible.builtin.set_fact:
             jellyfin_container: "{{ (jellyfin_container_raw.stdout | from_json)[0] }}"
 
-        # ------------------------------------------------------------------
-        # The negative control, started first so that it is ready by the time the
-        # checks below get to it. Same image, none of the role: no environment file,
-        # no labels, no bind mounts. Every claim made about the role's instance is
-        # put to this one as well.
-        # ------------------------------------------------------------------
         - name: Ensure a stale Jellyfin negative control container is gone
           ansible.builtin.command:
             cmd: "docker rm -f {{ jellyfin_molecule_control_container }}"
