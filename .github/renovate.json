@@ -11,7 +11,7 @@
     {
       "description": "Ignore the date-based versioning scheme (YYYY.MM.DD) this image used until December 2021; without this, 2021.12.16 outranks every real Jellyfin release",
       "matchDatasources": ["docker"],
-      "matchPackageNames": ["lscr.io/linuxserver/jellyfin"],
+      "matchPackageNames": ["ghcr.io/linuxserver/jellyfin"],
       "allowedVersions": "!/^20[0-9]{2}\\./"
     }
   ]

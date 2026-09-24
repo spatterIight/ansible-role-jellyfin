@@ -57,7 +57,7 @@ scenario() {
 	cat > defaults/main.yml <<-'YAML'
 		# jellyfin_version: 9.9.9
 
-		# renovate: datasource=docker depName=lscr.io/linuxserver/jellyfin versioning=semver
+		# renovate: datasource=docker depName=ghcr.io/linuxserver/jellyfin versioning=semver
 		jellyfin_version: 10.11.11
 		jellyfin_arch: amd64
 

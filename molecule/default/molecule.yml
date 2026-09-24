@@ -57,27 +57,23 @@ provisioner:
         # the process cannot see does not pass.
         jellyfin_molecule_marker_filename: jellyfin-molecule-marker.txt
 
-        # Variables for Jellyfin
         jellyfin_hostname: jellyfin.molecule.local
 
-        # Deliberately not the role's default of `/`, so that the path-prefix
-        # branches of templates/labels.j2 (the slashless redirect and the prefix
-        # stripping middleware) are rendered rather than skipped.
-        jellyfin_path_prefix: /jellyfin
+        # A non-root path prefix exercises the strip-prefix and slashless
+        # redirect middlewares in templates/labels.j2.
+        jellyfin_path_prefix: /jellyfin-ui
 
-        # Traefik is not running here, and does not need to be: the labels are
-        # written to a file the container carries, and are read back off the
-        # container. What is being checked is that the role emits them, with the
-        # values it was given, and only when it was asked to.
+        # Neither the role's default of Etc/UTC nor the test host's zone, so
+        # that the timezone the container ends up in can only have come from
+        # templates/env.j2.
+        jellyfin_environment_variables_tz: Asia/Tokyo
+
         jellyfin_container_labels_traefik_enabled: true
-        jellyfin_container_labels_traefik_entrypoints: web-secure
 
-        # Published on the platform container's loopback so the probes can reach it.
-        jellyfin_container_http_bind_port: 127.0.0.1:8096
-
-        # Reaches the process only through `TZ` in the rendered environment file.
-        # UTC+14 has no other way of turning up: the platform container is UTC.
-        jellyfin_timezone: Pacific/Kiritimati
+        # Bound to the loopback interface of the test container only. Nothing
+        # is published to the machine running Molecule, so two scenarios can
+        # run side by side without fighting over a port.
+        jellyfin_container_http_host_bind_port: "127.0.0.1:8096"
 
         # Reaches the process only through `JELLYFIN_PublishedServerUrl` in the
         # rendered environment file, and comes back out of the unauthenticated

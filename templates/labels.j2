@@ -32,6 +32,20 @@ traefik.http.middlewares.{{ jellyfin_identifier }}-strip-prefix.stripprefix.pref
 {% set middlewares = middlewares + [jellyfin_identifier + '-strip-prefix'] %}
 {% endif %}
 
+{% if jellyfin_container_labels_traefik_additional_request_headers.keys() | length > 0 %}
+{% for name, value in jellyfin_container_labels_traefik_additional_request_headers.items() %}
+traefik.http.middlewares.{{ jellyfin_identifier }}-add-request-headers.headers.customrequestheaders.{{ name }}={{ value }}
+{% endfor %}
+{% set middlewares = middlewares + [jellyfin_identifier + '-add-request-headers'] %}
+{% endif %}
+
+{% if jellyfin_container_labels_traefik_additional_response_headers.keys() | length > 0 %}
+{% for name, value in jellyfin_container_labels_traefik_additional_response_headers.items() %}
+traefik.http.middlewares.{{ jellyfin_identifier }}-add-response-headers.headers.customresponseheaders.{{ name }}={{ value }}
+{% endfor %}
+{% set middlewares = middlewares + [jellyfin_identifier + '-add-response-headers'] %}
+{% endif %}
+
 traefik.http.routers.{{ jellyfin_identifier }}.rule={{ jellyfin_container_labels_traefik_rule }}
 {% if jellyfin_container_labels_traefik_priority | int > 0 %}
 traefik.http.routers.{{ jellyfin_identifier }}.priority={{ jellyfin_container_labels_traefik_priority }}
@@ -49,4 +63,6 @@ traefik.http.routers.{{ jellyfin_identifier }}.tls.certResolver={{ jellyfin_cont
 traefik.http.services.{{ jellyfin_identifier }}.loadbalancer.server.port={{ jellyfin_container_http_port }}
 {% endif %}
 
-{{ jellyfin_container_labels_additional_labels }}
+{% for arg in jellyfin_container_labels_additional_labels %}
+{{ arg }}
+{% endfor %}

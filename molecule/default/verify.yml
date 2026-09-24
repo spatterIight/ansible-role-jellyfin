@@ -21,6 +21,17 @@
     # this one, which is far less fiddly to spell out.
     jellyfin_molecule_client_header: 'MediaBrowser Client="molecule", Device="molecule", DeviceId="molecule", Version="1"'
 
+    # The unusual values the scenario configures the role with. Written down
+    # here rather than read back out of the inventory, so that a verify run
+    # compares the running container against something stated, not against
+    # whatever the scenario happens to say at the time.
+    jellyfin_expected_uid: 0
+    jellyfin_expected_gid: 0
+    jellyfin_expected_hostname: jellyfin.molecule.local
+    jellyfin_expected_path_prefix: /jellyfin-ui
+    jellyfin_expected_timezone: Asia/Tokyo
+    jellyfin_expected_timezone_abbreviation: JST
+
     jellyfin_verify_units:
       - jellyfin.service
 
@@ -35,6 +46,11 @@
             file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
             name: jellyfin_defaults
 
+        # ------------------------------------------------------------------
+        # The negative control, started first so that it boots alongside the
+        # assertions below rather than after them
+        # ------------------------------------------------------------------
+
         - name: Read the Jellyfin container definition
           ansible.builtin.command:
             cmd: "docker container inspect {{ jellyfin_molecule_container }}"
@@ -43,14 +59,8 @@
 
         - name: Parse the Jellyfin container definition
           ansible.builtin.set_fact:
-            jellyfin_container_definition: "{{ (jellyfin_container_raw.stdout | from_json)[0] }}"
+            jellyfin_container: "{{ (jellyfin_container_raw.stdout | from_json)[0] }}"
 
-        # ------------------------------------------------------------------
-        # The negative control, started first so that it is ready by the time the
-        # checks below get to it. Same image, none of the role: no environment file,
-        # no labels, no bind mounts. Every claim made about the role's instance is
-        # put to this one as well.
-        # ------------------------------------------------------------------
         - name: Ensure a stale Jellyfin negative control container is gone
           ansible.builtin.command:
             cmd: "docker rm -f {{ jellyfin_molecule_control_container }}"
@@ -65,7 +75,7 @@
               --name {{ jellyfin_molecule_control_container }}
               --network {{ jellyfin_molecule_network }}
               -p 127.0.0.1:{{ jellyfin_molecule_control_bind_port }}:8096
-              {{ jellyfin_container_definition.Config.Image }}
+              {{ jellyfin_container.Config.Image }}
           changed_when: true
 
         # ------------------------------------------------------------------
@@ -161,7 +171,7 @@
           ansible.builtin.assert:
             that:
               - jellyfin_public_info.json.Version == jellyfin_defaults.jellyfin_version
-              - jellyfin_container_definition.Config.Image is search(':' ~ jellyfin_defaults.jellyfin_version ~ '$')
+              - jellyfin_container.Config.Image is search(':' ~ jellyfin_defaults.jellyfin_version ~ '$')
             fail_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
             success_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version }}"
 
@@ -379,67 +389,120 @@
         # ------------------------------------------------------------------
         - name: Assert the container runtime the role was given was passed through
           ansible.builtin.assert:
-            that: jellyfin_container_definition.HostConfig.Runtime == jellyfin_container_runtime
+            that: jellyfin_container.HostConfig.Runtime == jellyfin_container_runtime
             fail_msg: >-
               The container runs under runtime
-              '{{ jellyfin_container_definition.HostConfig.Runtime }}', not
+              '{{ jellyfin_container.HostConfig.Runtime }}', not
               '{{ jellyfin_container_runtime }}'
             success_msg: "The container runs under the configured '{{ jellyfin_container_runtime }}' runtime"
 
         - name: Assert the configured device was passed through to the container
           ansible.builtin.assert:
             that: >-
-              jellyfin_container_definition.HostConfig.Devices | default([], true)
+              jellyfin_container.HostConfig.Devices | default([], true)
               | selectattr('PathOnHost', 'equalto', jellyfin_gpu_path)
               | selectattr('PathInContainer', 'equalto', jellyfin_gpu_bind_path)
               | list | length == 1
             fail_msg: >-
               {{ jellyfin_gpu_path }} was not passed through as {{ jellyfin_gpu_bind_path }};
-              devices seen: {{ jellyfin_container_definition.HostConfig.Devices }}
+              devices seen: {{ jellyfin_container.HostConfig.Devices }}
             success_msg: "{{ jellyfin_gpu_path }} is passed through as {{ jellyfin_gpu_bind_path }}"
 
         - name: Assert the HTTP port the role publishes is the one the container listens on
           ansible.builtin.assert:
             that:
-              - ((jellyfin_defaults.jellyfin_container_http_port | string) ~ '/tcp') in jellyfin_container_definition.NetworkSettings.Ports
-              - jellyfin_container_definition.HostConfig.NetworkMode == jellyfin_molecule_network
+              - ((jellyfin_defaults.jellyfin_container_http_port | string) ~ '/tcp') in jellyfin_container.NetworkSettings.Ports
+              - jellyfin_container.HostConfig.NetworkMode == jellyfin_molecule_network
             fail_msg: >-
               The container does not publish {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp;
-              published: {{ jellyfin_container_definition.NetworkSettings.Ports.keys() | list }}
+              published: {{ jellyfin_container.NetworkSettings.Ports.keys() | list }}
             success_msg: "The container publishes {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp on the {{ jellyfin_molecule_network }} network"
 
         - name: Assert the extra container argument reached docker
           ansible.builtin.assert:
-            that: jellyfin_container_definition.Config.Labels['jellyfin.molecule.extra-argument'] | default('') == 'applied'
+            that: jellyfin_container.Config.Labels['jellyfin.molecule.extra-argument'] | default('') == 'applied'
             fail_msg: "jellyfin_container_extra_arguments did not reach the docker command line"
             success_msg: "jellyfin_container_extra_arguments reaches the docker command line"
 
         - name: Assert the additional environment variable reached the container
           ansible.builtin.assert:
-            that: "'JELLYFIN_MOLECULE_MARKER=applied' in jellyfin_container_definition.Config.Env"
+            that: "'JELLYFIN_MOLECULE_MARKER=applied' in jellyfin_container.Config.Env"
             fail_msg: "jellyfin_environment_variables_additional_variables did not reach the container environment"
             success_msg: "jellyfin_environment_variables_additional_variables reaches the container environment"
 
-        # ------------------------------------------------------------------
-        # The Traefik labels. Traefik is not running: what is being checked is that
-        # the role emits the labels it was configured to emit, with the values it
-        # was given, including the branches a non-root path prefix turns on.
-        # ------------------------------------------------------------------
-        - name: Assert the Traefik labels carry the configured routing
+        - name: Assert that the role's uid and gid reached the container
           ansible.builtin.assert:
             that:
-              - jellyfin_container_definition.Config.Labels['traefik.enable'] == 'true'
-              - >-
-                jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.rule']
-                == 'Host(`' ~ jellyfin_hostname ~ '`) && PathPrefix(`' ~ jellyfin_path_prefix ~ '`)'
-              - jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.entrypoints'] == jellyfin_container_labels_traefik_entrypoints
-              - jellyfin_container_definition.Config.Labels['traefik.http.routers.jellyfin.tls'] == 'true'
-              - jellyfin_container_definition.Config.Labels['traefik.http.middlewares.jellyfin-strip-prefix.stripprefix.prefixes'] == jellyfin_path_prefix
-              - >-
-                jellyfin_container_definition.Config.Labels['traefik.http.services.jellyfin.loadbalancer.server.port']
-                == (jellyfin_defaults.jellyfin_container_http_port | string)
-            fail_msg: "The Traefik labels do not match the role's configuration: {{ jellyfin_container_definition.Config.Labels }}"
-            success_msg: "The Traefik labels match the role's configuration"
+              - jellyfin_container.Config.User == (jellyfin_expected_uid | string) ~ ':' ~ (jellyfin_expected_gid | string)
+              - ('PUID=' ~ jellyfin_expected_uid) in jellyfin_container.Config.Env
+              - ('PGID=' ~ jellyfin_expected_gid) in jellyfin_container.Config.Env
+            fail_msg: >-
+              The container runs as {{ jellyfin_container.Config.User }}
+              with {{ jellyfin_container.Config.Env | select('match', 'P[UG]ID=') | list }}
+            success_msg: "The container runs as {{ jellyfin_container.Config.User }} and carries the matching PUID/PGID"
+
+        - name: Assert that the role's timezone reached the container environment
+          ansible.builtin.assert:
+            that:
+              - ('TZ=' ~ jellyfin_expected_timezone) in jellyfin_container.Config.Env
+            fail_msg: "templates/env.j2 did not put TZ={{ jellyfin_expected_timezone }} on the container"
+            success_msg: "The container environment carries TZ={{ jellyfin_expected_timezone }}"
+
+        - name: Assert that the container image is the pinned version
+          ansible.builtin.assert:
+            that:
+              - jellyfin_container.Config.Image == 'ghcr.io/linuxserver/jellyfin:' ~ jellyfin_defaults.jellyfin_version
+            fail_msg: >-
+              The container runs {{ jellyfin_container.Config.Image }}, not the
+              {{ jellyfin_defaults.jellyfin_version }} pinned in defaults/main.yml
+            success_msg: "The container runs {{ jellyfin_container.Config.Image }}"
+
+        # linuxserver.io stamps its own build onto the image as
+        # `<Jellyfin version>ubu2604-ls<rebuild counter>`. The trailing `ubu2604-ls` matters:
+        # without it, a pin of 0.24.187 would happily match 0.24.1870ubu2604-ls403.
+        - name: Assert the running Jellyfin is the version this role installs
+          ansible.builtin.assert:
+            that: jellyfin_container.Config.Labels['org.opencontainers.image.version'] is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ 'ubu2604-ls[0-9]+$')
+            fail_msg: "Jellyfin reports {{ jellyfin_container.Config.Labels['org.opencontainers.image.version'] | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
+            success_msg: "Jellyfin reports {{ jellyfin_container.Config.Labels['org.opencontainers.image.version'] }}"
+
+        # ------------------------------------------------------------------
+        # Traefik labels
+        # ------------------------------------------------------------------
+
+        - name: Assert that the Traefik labels describe the configured hostname and path prefix
+          ansible.builtin.assert:
+            that:
+              - jellyfin_container.Config.Labels['traefik.enable'] == 'true'
+              - jellyfin_container.Config.Labels['traefik.http.routers.jellyfin.rule'] == 'Host(`' ~ jellyfin_expected_hostname ~ '`) && PathPrefix(`' ~ jellyfin_expected_path_prefix ~ '`)'
+              - jellyfin_container.Config.Labels['traefik.http.middlewares.jellyfin-strip-prefix.stripprefix.prefixes'] == jellyfin_expected_path_prefix
+              - jellyfin_container.Config.Labels['traefik.http.services.jellyfin.loadbalancer.server.port'] == '8096'
+            fail_msg: "The Traefik labels are not what templates/labels.j2 should have produced: {{ jellyfin_container.Config.Labels }}"
+            success_msg: "The Traefik labels route {{ jellyfin_expected_hostname }}{{ jellyfin_expected_path_prefix }} to port 8096"
+
+        # ------------------------------------------------------------------
+        # What the process inside the container actually sees
+        # ------------------------------------------------------------------
+
+        - name: Ask the Jellyfin container which timezone and user it is running in
+          ansible.builtin.command:
+            cmd: docker exec jellyfin sh -c 'date +%Z; id -u; id -g'
+          register: jellyfin_process_identity
+          changed_when: false
+
+        - name: Assert that the Jellyfin process runs in the role's timezone, as the role's user
+          ansible.builtin.assert:
+            that:
+              - jellyfin_process_identity.stdout_lines[0] == jellyfin_expected_timezone_abbreviation
+              - jellyfin_process_identity.stdout_lines[1] == jellyfin_expected_uid | string
+              - jellyfin_process_identity.stdout_lines[2] == jellyfin_expected_gid | string
+            fail_msg: >-
+              The container reports zone/uid/gid {{ jellyfin_process_identity.stdout_lines }},
+              expected [{{ jellyfin_expected_timezone_abbreviation }},
+              {{ jellyfin_expected_uid }}, {{ jellyfin_expected_gid }}]
+            success_msg: >-
+              The Jellyfin process runs in {{ jellyfin_process_identity.stdout_lines[0] }}
+              as {{ jellyfin_process_identity.stdout_lines[1] }}:{{ jellyfin_process_identity.stdout_lines[2] }}
 
         # ------------------------------------------------------------------
         # Restarting. The unit creates its container with `--rm` and removes it
@@ -473,22 +536,6 @@
               StartupWizardCompleted={{ jellyfin_public_info_after_restart.json.StartupWizardCompleted | default('n/a') }};
               the /config bind mount is not persisting state
             success_msg: "Jellyfin's state survived the container being recreated"
-
-        - name: Read the timezone inside the Jellyfin container
-          ansible.builtin.command:
-            cmd: "docker exec {{ jellyfin_molecule_container }} date +%z"
-          register: jellyfin_container_timezone
-          changed_when: false
-
-        # The role's timezone reaches the container only through `TZ` in the
-        # rendered environment file, and the host this runs on is UTC.
-        - name: Assert the configured timezone reached the container
-          ansible.builtin.assert:
-            that: jellyfin_container_timezone.stdout | trim == '+1400'
-            fail_msg: >-
-              The container reports UTC offset {{ jellyfin_container_timezone.stdout | trim }};
-              jellyfin_timezone ({{ jellyfin_timezone }}) did not reach it
-            success_msg: "The container runs on the configured {{ jellyfin_timezone }}"
 
         # ------------------------------------------------------------------
         # The negative control, which was started at the top of this play.
@@ -574,20 +621,6 @@
               so the media mount assert proves nothing
             success_msg: "The unconfigured container has no media bind mount"
 
-        - name: Read the timezone inside the negative control container
-          ansible.builtin.command:
-            cmd: "docker exec {{ jellyfin_molecule_control_container }} date +%z"
-          register: jellyfin_control_timezone
-          changed_when: false
-
-        - name: Assert the negative control does not run on the configured timezone
-          ansible.builtin.assert:
-            that: jellyfin_control_timezone.stdout | trim != '+1400'
-            fail_msg: >-
-              An unconfigured container also reports +1400, so the timezone assert
-              proves nothing
-            success_msg: "An unconfigured container reports {{ jellyfin_control_timezone.stdout | trim }} instead"
-
         - name: Ensure the Jellyfin negative control container is removed
           ansible.builtin.command:
             cmd: "docker rm -f {{ jellyfin_molecule_control_container }}"
@@ -638,9 +671,8 @@
               - "Jellyfin systemd: {% for unit, state in jellyfin_verify_units | zip(jellyfin_services.results | map(attribute='status.ActiveState')) %}{{ unit }} ({{ state }}){% if not loop.last %}, {% endif %}{% endfor %}"
               - "Jellyfin restarts: {% for unit, restarts in jellyfin_verify_units | zip(jellyfin_restarts_after.results | map(attribute='status.NRestarts')) %}{{ restarts }} ({{ unit }}){% if not loop.last %}, {% endif %}{% endfor %}"
               - "Jellyfin version: {{ jellyfin_public_info.json.Version }}"
-              - "Jellyfin image: {{ jellyfin_container_definition.Config.Image }}"
+              - "Jellyfin image: {{ jellyfin_container.Config.Image }}"
               - "Jellyfin published server URL: {{ jellyfin_public_info.json.LocalAddress }}"
-              - "Jellyfin timezone offset: {{ jellyfin_container_timezone.stdout | trim }}"
 
       rescue:
         # Whatever went wrong, the reason is almost always in the systemd service log.

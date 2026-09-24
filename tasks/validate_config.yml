@@ -12,6 +12,8 @@
       Please change your configuration to rename the variable (`{{ item.old }}` -> `{{ item.new }}`).
   when: "lookup('ansible.builtin.varnames', ('^' + item.old + '$'), wantlist=True) | length > 0"
   with_items:
+    - { "old": "jellyfin_container_http_bind_port", "new": "jellyfin_container_http_host_bind_port" }
+    - { "old": "jellyfin_timezone", "new": "jellyfin_environment_variables_tz" }
     - { "old": "jellyfin_container_additional_environment_variables", "new": "jellyfin_environment_variables_additional_variables" }
     - { "old": "jellyfin_container_image_force_pull", "new": "<removed> (the new community.docker.docker_image_pull module handles this natively)" }
 
@@ -35,6 +37,13 @@
 - name: Validate Jellyfin Traefik configuration
   when: jellyfin_container_labels_traefik_enabled | bool
   block:
+    - name: (Deprecation) Catch and report Jellyfin labels for Traefik in the old string format
+      ansible.builtin.fail:
+        msg: >-
+          `jellyfin_container_labels_additional_labels` now require a list of strings.
+          Replace `jellyfin_container_labels_additional_labels: |` with `jellyfin_container_labels_additional_labels_custom:` and make each label a list item.
+      when: "jellyfin_container_labels_additional_labels | default([]) is string"
+
     - name: Fail if required Jellyfin Traefik settings not defined
       ansible.builtin.fail:
         msg: >-
