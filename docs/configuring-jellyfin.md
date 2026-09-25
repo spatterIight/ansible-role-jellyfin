@@ -16,42 +16,42 @@ SPDX-FileCopyrightText: 2024-2026 Suguru Hirahara
 SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
-# Setting up Plex Media Server
+# Setting up Jellyfin
 
-This is an [Ansible](https://www.ansible.com/) role which installs a standalone [Plex Media Server](https://docs.linuxserver.io/images/docker-plex) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
+This is an [Ansible](https://www.ansible.com/) role which installs a standalone [Jellyfin](https://docs.linuxserver.io/images/docker-jellyfin) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
 
-Plex is a personal media server that allows you to organize and stream your collection of movies, TV shows, music, and photos.
+Jellyfin is a personal media server that allows you to organize and stream your collection of movies, TV shows, music, and photos.
 
-See the project's [documentation](https://docs.linuxserver.io/images/docker-plex/) to learn what Plex Media Server does and why it might be useful to you.
+See the project's [documentation](https://docs.linuxserver.io/images/docker-jellyfin/) to learn what Jellyfin does and why it might be useful to you.
 
 ## Adjusting the playbook configuration
 
-To enable Plex Media Server with this role, add the following configuration to your `vars.yml` file.
+To enable Jellyfin with this role, add the following configuration to your `vars.yml` file.
 
 **Note**: the path should be something like `inventory/host_vars/mash.example.com/vars.yml` if you use the [MASH Ansible playbook](https://github.com/mother-of-all-self-hosting/mash-playbook).
 
 ```yaml
 ########################################################################
 #                                                                      #
-# plex                                                                 #
+# jellyfin                                                             #
 #                                                                      #
 ########################################################################
 
-plex_enabled: true
+jellyfin_enabled: true
 
 ########################################################################
 #                                                                      #
-# /plex                                                                #
+# /jellyfin                                                            #
 #                                                                      #
 ########################################################################
 ```
 
 ### Set the hostname
 
-To enable Plex Media Server you need to set the hostname as well. To do so, add the following configuration to your `vars.yml` file. Make sure to replace `example.com` with your own value.
+To enable Jellyfin you need to set the hostname as well. To do so, add the following configuration to your `vars.yml` file. Make sure to replace `example.com` with your own value.
 
 ```yaml
-plex_hostname: "example.com"
+jellyfin_hostname: "example.com"
 ```
 
 After adjusting the hostname, make sure to adjust your DNS records to point the domain to your server.
@@ -61,15 +61,15 @@ After adjusting the hostname, make sure to adjust your DNS records to point the 
 To mount a data directory inside the container, add the following configuration to your `vars.yml` file (adapt to your needs):
 
 ```yaml
-plex_media_bind_path: /media
+jellyfin_media_bind_path: /media
 ```
 
-This case, the directory specified with `plex_media_path` on the host machine will be available at `/media` inside the container.
+This case, the directory specified with `jellyfin_media_path` on the host machine will be available at `/media` inside the container.
 
 To mount additional data directories, add the following configuration to your `vars.yml` file (adapt to your needs):
 
 ```yaml
-plex_container_additional_volumes_custom:
+jellyfin_container_additional_volumes_custom:
   - type: bind
     src: /path/to/blackhole
     dst: /downloads
@@ -80,52 +80,52 @@ plex_container_additional_volumes_custom:
 By default no ports are exposed, but there are some ports which you'll most likely want to expose. To do so, add the following configuration to your `vars.yml` file (adapt to your needs):
 
 ```yaml
-# The main Plex webserver port
-# Add this setting (and configure port-forwarding in your router) if you want to access Plex Media Server from https://app.plex.tv or via TV and phone apps
-plex_container_http_host_bind_port: 32400
+# The main Jellyfin webserver port
+# Add this setting (and configure port-forwarding in your router) if you want to access Jellyfin from https://app.jellyfin.tv or via TV and phone apps
+jellyfin_container_http_host_bind_port: 32400
 
 # GDM network discovery ports
-# Add this setting if you want to let Plex clients on the same network discover your server and connect to it locally, connecting back to your server via its external IP address
-plex_container_gdm_bind_port_01: 32410
-plex_container_gdm_bind_port_02: 32412
-plex_container_gdm_bind_port_03: 32413
-plex_container_gdm_bind_port_04: 32414
+# Add this setting if you want to let Jellyfin clients on the same network discover your server and connect to it locally, connecting back to your server via its external IP address
+jellyfin_container_gdm_bind_port_01: 32410
+jellyfin_container_gdm_bind_port_02: 32412
+jellyfin_container_gdm_bind_port_03: 32413
+jellyfin_container_gdm_bind_port_04: 32414
 ```
 
-Refer to [`defaults/main.yml`](../defaults/main.yml) for other ports such as the ones used for accessing to the Plex DLNA server or controlling Plex for Roku via Plex Companion.
+Refer to [`defaults/main.yml`](../defaults/main.yml) for other ports such as the ones used for accessing to the Jellyfin DLNA server or controlling Jellyfin for Roku via Jellyfin Companion.
 
 Refer to the official documentation as well:
 
-- <https://support.plex.tv/articles/201543147-what-network-ports-do-i-need-to-allow-through-my-firewall/>
-- <https://docs.linuxserver.io/images/docker-plex/#umask-for-running-applications>
+- <https://support.jellyfin.tv/articles/201543147-what-network-ports-do-i-need-to-allow-through-my-firewall/>
+- <https://docs.linuxserver.io/images/docker-jellyfin/#umask-for-running-applications>
 
-### Specify Plex Claim Token
+### Specify Jellyfin Claim Token
 
-To use Plex Media Server it is necessary to connect it to your plex.tv user account by "claiming" it. The claim token can be obtained at <https://plex.tv/claim>.
+To use Jellyfin it is necessary to connect it to your jellyfin.tv user account by "claiming" it. The claim token can be obtained at <https://jellyfin.tv/claim>.
 
 Since the container is configured to run in "host" networking mode, it is required that the claim token be provided during first time setup.
 
 To specify the token, add the following configuration to your `vars.yml` file:
 
 ```yaml
-plex_claim_token: YOUR_PLEX_CLAIM_TOKEN_HERE
+jellyfin_claim_token: YOUR_PLEX_CLAIM_TOKEN_HERE
 ```
 
 >[!NOTE]
 > **The claim token expires after 4 minutes.** It is recommended to obtain the token after making sure that you have finished adjustment of the other settings.
 
-### Plex Pass updates
+### Jellyfin Pass updates
 
-To enable Plex Pass updates you need to run the container as a root user with the writable filesystem:
+To enable Jellyfin Pass updates you need to run the container as a root user with the writable filesystem:
 
 ```yaml
-plex_uid: 0
-plex_gid: 0
+jellyfin_uid: 0
+jellyfin_gid: 0
 
-plex_container_read_only: false
+jellyfin_container_read_only: false
 ```
 
-You'll also want to set `plex_environment_variables_version` to `latest` or `public`. Refer to [`defaults/main.yml`](../defaults/main.yml) for details about it.
+You'll also want to set `jellyfin_environment_variables_version` to `latest` or `public`. Refer to [`defaults/main.yml`](../defaults/main.yml) for details about it.
 
 ### Hardware Acceleration
 
@@ -137,14 +137,14 @@ For Intel/ATI/AMD GPUs enabling hardware acceleration is as easy as mounting the
 
 ```yaml
 # The path where the Intel/ATI/AMD GPU is on the host system
-plex_gpu_path: "/dev/dri"
+jellyfin_gpu_path: "/dev/dri"
 
 # The path to mount the Intel/ATI/AMD GPU to in the container.
 # Takes a path value (e.g. "/dev/dri"), or empty string to not mount.
-plex_gpu_bind_path: "{{ plex_gpu_path }}"
+jellyfin_gpu_bind_path: "{{ jellyfin_gpu_path }}"
 ```
 
-Upstream documentation: <https://docs.linuxserver.io/images/docker-plex/#intelatiamd>
+Upstream documentation: <https://docs.linuxserver.io/images/docker-jellyfin/#intelatiamd>
 
 #### NVIDIA
 
@@ -154,14 +154,14 @@ Once the runtime is installed and available, add the following configuration:
 
 ```yaml
 # The container runtime that the container engine should use
-plex_container_runtime: "nvidia"
+jellyfin_container_runtime: "nvidia"
 
 # To enable NVIDIA GPU hardware acceleration this value should either be 'all' or the UUID value of the GPU
 # which can obtained with the command -> 'nvidia-smi --query-gpu=gpu_name,gpu_uuid --format=csv'
-plex_nvidia_visible_devices: "all"
+jellyfin_nvidia_visible_devices: "all"
 ```
 
-Upstream documentation: <https://docs.linuxserver.io/images/docker-plex/#nvidia>
+Upstream documentation: <https://docs.linuxserver.io/images/docker-jellyfin/#nvidia>
 
 ### Extending the configuration
 
@@ -169,7 +169,7 @@ There are some additional things you may wish to configure about the service.
 
 Take a look at:
 
-- [`defaults/main.yml`](../defaults/main.yml) for some variables that you can customize via your `vars.yml` file. You can override settings (even those that don't have dedicated playbook variables) using the `plex_environment_variables_additional_variables` variable
+- [`defaults/main.yml`](../defaults/main.yml) for some variables that you can customize via your `vars.yml` file. You can override settings (even those that don't have dedicated playbook variables) using the `jellyfin_environment_variables_additional_variables` variable
 
 ## Installing
 
@@ -183,22 +183,22 @@ If you use the MASH playbook, the shortcut commands with the [`just` program](ht
 
 ## Usage
 
-After running the command for installation, Plex Media Server becomes available at the specified hostname like `https://example.com`.
+After running the command for installation, Jellyfin becomes available at the specified hostname like `https://example.com`.
 
 To get started, open the URL with a web browser, and follow the set up wizard.
 
-When prompted to add your media libraries keep in mind that it will be the path **inside** the container, most likely the `dst` parameter of your `plex_container_additional_volumes_custom` variable.
+When prompted to add your media libraries keep in mind that it will be the path **inside** the container, most likely the `dst` parameter of your `jellyfin_container_additional_volumes_custom` variable.
 
 ## Troubleshooting
 
 ### Check recognized GPUs on settings
 
-To verify Plex is detecting your GPU device, navigate to `Settings -> Transcoder -> Hardware transcoding device` and select your GPU. If you do not see the `Hardware transcoding device` drop-down make sure you have ticked the `Use hardware acceleration when available` checkbox.
+To verify Jellyfin is detecting your GPU device, navigate to `Settings -> Transcoder -> Hardware transcoding device` and select your GPU. If you do not see the `Hardware transcoding device` drop-down make sure you have ticked the `Use hardware acceleration when available` checkbox.
 
 If it is recognized properly, it is listed on the settings as below:
 
-![Plex Configure Transcoding](./assets/transcoder.webp)
+![Jellyfin Configure Transcoding](./assets/transcoder.webp)
 
 ### Check the service's logs
 
-You can find the logs in [systemd-journald](https://www.freedesktop.org/software/systemd/man/systemd-journald.service.html) by logging in to the server with SSH and running `journalctl -fu plex` (or how you/your playbook named the service, e.g. `mash-plex`).
+You can find the logs in [systemd-journald](https://www.freedesktop.org/software/systemd/man/systemd-journald.service.html) by logging in to the server with SSH and running `journalctl -fu jellyfin` (or how you/your playbook named the service, e.g. `mash-jellyfin`).
