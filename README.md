@@ -36,7 +36,7 @@ Additionally, like all LinuxServer docker images, full `cap-drop` is not support
 
 ### The first-run setup wizard
 
-Jellyfin ships with no accounts. Since the wizard is open until somebody completes its first-run wizard, this role is configured to enable the HTTP Basic authentication on Traefik by default. See [this page](https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/basicauth/) on the Traefik's documentation for details.
+Jellyfin ships with no accounts. Since the wizard is open until somebody completes its first-run wizard, this role is configured to enable the HTTP Basic authentication on Traefik by default. Refer to [this page](https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/basicauth/) on the Traefik's documentation for details.
 
 You can use `htpasswd` to generate the user and password pair, which needs to be set to `jellyfin_container_labels_traefik_middleware_basic_auth_users`.
 
