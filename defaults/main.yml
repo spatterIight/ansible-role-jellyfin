@@ -65,7 +65,7 @@ jellyfin_container_network: "{{ jellyfin_identifier }}"
 jellyfin_container_network_deletion_enabled: true
 
 # For information on all the ports Jellyfin may use, and what they do, see the below docs
-# https://github.com/linuxserver/docker-jellyfin#optional-parameters
+# https://docs.linuxserver.io/images/docker-jellyfin/#optional-parameters
 
 # Specify how the container publishes its HTTP port (as defined by `jellyfin_container_http_port`).
 #

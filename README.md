@@ -15,7 +15,7 @@ This role *implicitly* depends on:
 - [`com.devture.ansible.role.playbook_help`](https://github.com/devture/com.devture.ansible.role.playbook_help)
 - [`com.devture.ansible.role.systemd_docker_base`](https://github.com/devture/com.devture.ansible.role.systemd_docker_base)
 
-Check [`defaults/main.yml`](defaults/main.yml) for the full list of supported options.
+Check [`defaults/main.yml`](defaults/main.yml) for the full list of supported options. Refer to [this page](docs/configuring-jellyfin.md) for details about setting up the service with this role.
 
 💡 For an Ansible playbook which integrates this role and makes it easier to use, see the [Mother-of-All-Self-Hosting Ansible playbook](https://github.com/mother-of-all-self-hosting/mash-playbook).
 
@@ -33,18 +33,6 @@ Additionally, like all LinuxServer docker images, full `cap-drop` is not support
 - CHOWN
 - FOWNER
 - DAC_OVERRIDE
-
-### The first-run setup wizard
-
-Jellyfin ships with no accounts. Since the wizard is open until somebody completes its first-run wizard, this role is configured to enable the HTTP Basic authentication on Traefik by default. See [this page](https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/basicauth/) on the Traefik's documentation for details.
-
-You can use `htpasswd` to generate the user and password pair, which needs to be set to `jellyfin_container_labels_traefik_middleware_basic_auth_users`.
-
-After completing the wizard, you can safely disable it by adding the following configuration to your `vars.yml` file:
-
-```yaml
-jellyfin_container_labels_traefik_middleware_basic_auth_enabled: false
-```
 
 ## Development
 
