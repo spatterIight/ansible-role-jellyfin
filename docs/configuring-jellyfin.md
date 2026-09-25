@@ -75,58 +75,6 @@ jellyfin_container_additional_volumes_custom:
     dst: /downloads
 ```
 
-### Exposing ports
-
-By default no ports are exposed, but there are some ports which you'll most likely want to expose. To do so, add the following configuration to your `vars.yml` file (adapt to your needs):
-
-```yaml
-# The main Jellyfin webserver port
-# Add this setting (and configure port-forwarding in your router) if you want to access Jellyfin from https://app.jellyfin.tv or via TV and phone apps
-jellyfin_container_http_host_bind_port: 32400
-
-# GDM network discovery ports
-# Add this setting if you want to let Jellyfin clients on the same network discover your server and connect to it locally, connecting back to your server via its external IP address
-jellyfin_container_gdm_bind_port_01: 32410
-jellyfin_container_gdm_bind_port_02: 32412
-jellyfin_container_gdm_bind_port_03: 32413
-jellyfin_container_gdm_bind_port_04: 32414
-```
-
-Refer to [`defaults/main.yml`](../defaults/main.yml) for other ports such as the ones used for accessing to the Jellyfin DLNA server or controlling Jellyfin for Roku via Jellyfin Companion.
-
-Refer to the official documentation as well:
-
-- <https://support.jellyfin.tv/articles/201543147-what-network-ports-do-i-need-to-allow-through-my-firewall/>
-- <https://docs.linuxserver.io/images/docker-jellyfin/#umask-for-running-applications>
-
-### Specify Jellyfin Claim Token
-
-To use Jellyfin it is necessary to connect it to your jellyfin.tv user account by "claiming" it. The claim token can be obtained at <https://jellyfin.tv/claim>.
-
-Since the container is configured to run in "host" networking mode, it is required that the claim token be provided during first time setup.
-
-To specify the token, add the following configuration to your `vars.yml` file:
-
-```yaml
-jellyfin_claim_token: YOUR_PLEX_CLAIM_TOKEN_HERE
-```
-
->[!NOTE]
-> **The claim token expires after 4 minutes.** It is recommended to obtain the token after making sure that you have finished adjustment of the other settings.
-
-### Jellyfin Pass updates
-
-To enable Jellyfin Pass updates you need to run the container as a root user with the writable filesystem:
-
-```yaml
-jellyfin_uid: 0
-jellyfin_gid: 0
-
-jellyfin_container_read_only: false
-```
-
-You'll also want to set `jellyfin_environment_variables_version` to `latest` or `public`. Refer to [`defaults/main.yml`](../defaults/main.yml) for details about it.
-
 ### Hardware Acceleration
 
 To enable hardware acceleration you'll first need to determine your GPU brand. Once you've done this, read the corresponding section below:
@@ -190,14 +138,6 @@ To get started, open the URL with a web browser, and follow the set up wizard.
 When prompted to add your media libraries keep in mind that it will be the path **inside** the container, most likely the `dst` parameter of your `jellyfin_container_additional_volumes_custom` variable.
 
 ## Troubleshooting
-
-### Check recognized GPUs on settings
-
-To verify Jellyfin is detecting your GPU device, navigate to `Settings -> Transcoder -> Hardware transcoding device` and select your GPU. If you do not see the `Hardware transcoding device` drop-down make sure you have ticked the `Use hardware acceleration when available` checkbox.
-
-If it is recognized properly, it is listed on the settings as below:
-
-![Jellyfin Configure Transcoding](./assets/transcoder.webp)
 
 ### Check the service's logs
 
