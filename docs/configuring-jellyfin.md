@@ -18,11 +18,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Setting up Jellyfin
 
-This is an [Ansible](https://www.ansible.com/) role which installs a standalone [Jellyfin](https://docs.linuxserver.io/images/docker-jellyfin) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
+This is an [Ansible](https://www.ansible.com/) role which installs [Jellyfin](https://jellyfin.org/) to run as a [Docker](https://www.docker.com/) container wrapped in a systemd service.
 
-Jellyfin is a personal media server that allows you to organize and stream your collection of movies, TV shows, music, and photos.
+Jellyfin is an open-source personal media server that allows you to organize and stream your collection of movies, TV shows, and music.
 
-See the project's [documentation](https://docs.linuxserver.io/images/docker-jellyfin/) to learn what Jellyfin does and why it might be useful to you.
+See the project's [documentation](https://jellyfin.org/docs/) to learn what Jellyfin does and why it might be useful to you.
 
 ## Adjusting the playbook configuration
 
@@ -74,6 +74,32 @@ jellyfin_container_additional_volumes_custom:
     src: /path/to/blackhole
     dst: /downloads
 ```
+
+### Configuring DLNA & Local discovery
+
+By default your Jellyfin instance cannot be connected to directly, and must be routed through Traefik (usually with HTTPS). This works fine for the web-app, phone, and TV apps. However, depending on your setup, you may want to connect directly to your server on the LAN with no HTTPS.
+
+Keep in mind that doing so will send your Jellyfin password across the network in plain-text. This is not a recommended configuration. That said, here is how:
+
+```yaml
+# The main Jellyfin webserver port, setting this variable will expose that port and allow you to connect directly to it (without Traefik).
+jellyfin_container_http_host_bind_port: 8096
+
+# The Jellyfin DLNA server, used for clients to discover Jellyfin on the LAN
+jellyfin_container_service_discover_bind_port: 1900
+
+# Another service related to discovering Jellyfin on the LAN.
+# From the docs:
+# "Allows clients to discover Jellyfin on the local network. A broadcast message to this port with 'Who is JellyfinServer?' will get a JSON response that includes the server address, ID, and name."
+jellyfin_container_client_discover_bind_port: 7359
+
+# The server address the client discovery service should respond with
+jellyfin_published_server_url: "http://{{ ansible_default_ipv4.address }}:{{ jellyfin_container_http_host_bind_port }}"
+```
+
+Upstream documentation: <https://jellyfin.org/docs/general/post-install/networking/>
+
+After setting these variables you should be able to discover and connect to your Jellyfin server entirely on the LAN. If for some reason it is still not discoverable try inputting your `jellyfin_published_server_url` manually.
 
 ### Hardware Acceleration
 
@@ -133,7 +159,9 @@ If you use the MASH playbook, the shortcut commands with the [`just` program](ht
 
 After running the command for installation, Jellyfin becomes available at the specified hostname like `https://example.com`.
 
-To get started, open the URL with a web browser, and follow the set up wizard.
+To get started, open the URL with a web browser to create an account.
+
+![Jellyfin Configure User](./assets/setup-1.webp)
 
 When prompted to add your media libraries keep in mind that it will be the path **inside** the container, most likely the `dst` parameter of your `jellyfin_container_additional_volumes_custom` variable.
 
