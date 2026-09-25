@@ -75,6 +75,18 @@ jellyfin_container_additional_volumes_custom:
     dst: /downloads
 ```
 
+### Configuring HTTP Basic authentication
+
+Jellyfin ships with no accounts. Since the wizard is open until somebody completes its first-run wizard, this role is configured to enable the HTTP Basic authentication on Traefik by default. Refer to [this page](https://doc.traefik.io/traefik/reference/routing-configuration/http/middlewares/basicauth/) on the Traefik's documentation for details.
+
+You can use `htpasswd` to generate the user and password pair, which needs to be set to `jellyfin_container_labels_traefik_middleware_basic_auth_users`.
+
+After completing the wizard, you can safely disable it by adding the following configuration to your `vars.yml` file:
+
+```yaml
+jellyfin_container_labels_traefik_middleware_basic_auth_enabled: false
+```
+
 ### Configuring DLNA & Local discovery
 
 By default your Jellyfin instance cannot be connected to directly, and must be routed through Traefik (usually with HTTPS). This works fine for the web-app, phone, and TV apps. However, depending on your setup, you may want to connect directly to your server on the LAN with no HTTPS.
