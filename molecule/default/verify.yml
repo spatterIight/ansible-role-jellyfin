@@ -379,16 +379,21 @@
           register: jellyfin_additional_volume_listing
           changed_when: false
 
-        - name: Assert the Jellyfin additional volume reached the process
+        - name: Read the marker through the additional volume
+          ansible.builtin.command:
+            cmd: >-
+              docker exec jellyfin
+              cat {{ jellyfin_molecule_extra_volume_dst }}/{{ jellyfin_molecule_marker_filename }}
+          register: jellyfin_extra_volume_marker
+          changed_when: false
+
+        - name: Assert the additional volume carries data into the container
           ansible.builtin.assert:
             that:
               - jellyfin_additional_volume_listing.status == 200
-              - jellyfin_molecule_marker_filename in (jellyfin_additional_volume_listing.json | map(attribute='Name') | list)
-            fail_msg: >-
-              Jellyfin cannot see {{ jellyfin_molecule_marker_filename }} under
-              {{ jellyfin_container_additional_volumes[0].dst }}, so
-              jellyfin_container_additional_volumes is inert
-            success_msg: "Jellyfin sees the additional volume at {{ jellyfin_container_additional_volumes[0].dst }}"
+              - jellyfin_extra_volume_marker.stdout | trim == jellyfin_molecule_extra_volume_marker
+            fail_msg: "The additional volume did not carry the marker into the container"
+            success_msg: "The additional volume carries the marker into the container"
 
         - name: Check the Jellyfin library database on the host
           ansible.builtin.stat:

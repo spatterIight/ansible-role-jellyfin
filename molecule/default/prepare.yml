@@ -48,6 +48,6 @@
 
     - name: Ensure a marker file exists in the Jellyfin Molecule additional volume
       ansible.builtin.copy:
-        content: "additional volume reached the process\n"
+        content: "{{ jellyfin_molecule_extra_volume_marker }}\n"
         dest: "{{ jellyfin_molecule_extra_volume_src }}/{{ jellyfin_molecule_marker_filename }}"
         mode: "0644"
