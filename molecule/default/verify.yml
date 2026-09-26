@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -330,6 +331,25 @@
         # made to list the directories back, so a mount that docker accepted but
         # that never reached the application would not pass.
         # ------------------------------------------------------------------
+
+        - name: Collect the mounts the role asked for
+          ansible.builtin.set_fact:
+            jellyfin_extra_mount: "{{ jellyfin_container.Mounts | selectattr('Destination', 'equalto', '/molecule-extra') | list }}"
+
+        # jellyfin_container_additional_volumes has been inert in several roles in
+        # this collection - rendered into a comment, or into a `-v` that silently
+        # dropped the options. Both the destination and the readonly option have
+        # to arrive.
+        - name: Assert that jellyfin_container_additional_volumes reached the container
+          ansible.builtin.assert:
+            that:
+              - jellyfin_extra_mount | length == 1
+              - jellyfin_extra_mount[0].Type == 'bind'
+              - jellyfin_extra_mount[0].Source == '/jellyfin-molecule-extra'
+              - not jellyfin_extra_mount[0].RW
+            fail_msg: "The additional volume did not reach the container: {{ jellyfin_container.Mounts }}"
+            success_msg: "The additional volume is mounted read-only at /molecule-extra"
+
         - name: List the Jellyfin media path through Jellyfin itself
           ansible.builtin.uri:
             url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_media_bind_path | urlencode }}&includeFiles=true"
@@ -360,16 +380,24 @@
           register: jellyfin_additional_volume_listing
           changed_when: false
 
-        - name: Assert the Jellyfin additional volume reached the process
+        # Reading the file back from inside the
+        # container is the difference between the variable existing and it working.
+        - name: Read the marker through the additional volume
+          ansible.builtin.command:
+            cmd: >-
+              docker exec jellyfin
+              cat {{ jellyfin_molecule_extra_volume_dst }}/{{ jellyfin_molecule_marker_filename }}
+          register: jellyfin_extra_volume
+          changed_when: false
+
+        - name: Assert the additional volume carries data into the container
           ansible.builtin.assert:
             that:
               - jellyfin_additional_volume_listing.status == 200
-              - jellyfin_molecule_marker_filename in (jellyfin_additional_volume_listing.json | map(attribute='Name') | list)
-            fail_msg: >-
-              Jellyfin cannot see {{ jellyfin_molecule_marker_filename }} under
-              {{ jellyfin_container_additional_volumes[0].dst }}, so
-              jellyfin_container_additional_volumes is inert
-            success_msg: "Jellyfin sees the additional volume at {{ jellyfin_container_additional_volumes[0].dst }}"
+              - jellyfin_extra_volume.rc == 0
+              - jellyfin_extra_volume.stdout | trim == jellyfin_molecule_extra_volume_marker
+            fail_msg: "The additional volume did not carry the marker into the container"
+            success_msg: "The additional volume carries the marker into the container"
 
         - name: Check the Jellyfin library database on the host
           ansible.builtin.stat:
@@ -417,12 +445,6 @@
               The container does not publish {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp;
               published: {{ jellyfin_container.NetworkSettings.Ports.keys() | list }}
             success_msg: "The container publishes {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp on the {{ jellyfin_molecule_network }} network"
-
-        - name: Assert the extra container argument reached docker
-          ansible.builtin.assert:
-            that: jellyfin_container.Config.Labels['jellyfin.molecule.extra-argument'] | default('') == 'applied'
-            fail_msg: "jellyfin_container_extra_arguments did not reach the docker command line"
-            success_msg: "jellyfin_container_extra_arguments reaches the docker command line"
 
         - name: Assert the additional environment variable reached the container
           ansible.builtin.assert:
@@ -479,6 +501,17 @@
               - jellyfin_container.Config.Labels['traefik.http.services.jellyfin.loadbalancer.server.port'] == '8096'
             fail_msg: "The Traefik labels are not what templates/labels.j2 should have produced: {{ jellyfin_container.Config.Labels }}"
             success_msg: "The Traefik labels route {{ jellyfin_expected_hostname }}{{ jellyfin_expected_path_prefix }} to port 8096"
+
+        - name: Assert that the additional labels and extra arguments reached the container
+          ansible.builtin.assert:
+            that:
+              - jellyfin_container.Config.Labels['mash.molecule.additional-label'] == 'set-by-the-role'
+              - jellyfin_container.Config.Labels['mash.molecule.extra-argument'] == 'set-by-the-role'
+            fail_msg: >-
+              jellyfin_container_labels_additional_labels or
+              jellyfin_container_extra_arguments did not reach the container:
+              {{ jellyfin_container.Config.Labels }}
+            success_msg: "The additional label and the extra argument both reached the container"
 
         # ------------------------------------------------------------------
         # What the process inside the container actually sees

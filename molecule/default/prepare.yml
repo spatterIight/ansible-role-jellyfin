@@ -34,18 +34,20 @@
           # nested-container isolation without the copying.
           storage-driver: fuse-overlayfs
 
-    # The role bind-mounts this path but, unlike its own data and media paths,
-    # does not create it. `--mount type=bind` refuses to start a container whose
-    # source path is missing, so this doubles as a check that the role really
-    # passes the additional volumes to `docker create`.
-    - name: Ensure the Jellyfin Molecule additional volume source exists
+    # Bind-mounted into the Jellyfin container through
+    # `jellyfin_container_additional_volumes`. The role does not create the source
+    # of an additional volume, so it has to exist before the container is
+    # created, or `docker create` refuses the bind. verify.yml reads the marker
+    # file back from inside the container, which only works if the systemd unit
+    # really carries the additional volumes.
+    - name: Ensure the additional volume directory exists for Jellyfin Molecule tests
       ansible.builtin.file:
-        path: /jellyfin-molecule-extra
+        path: "{{ jellyfin_molecule_extra_volume_src }}"
         state: directory
         mode: "0755"
 
     - name: Ensure a marker file exists in the Jellyfin Molecule additional volume
       ansible.builtin.copy:
-        content: "additional volume reached the process\n"
-        dest: "/jellyfin-molecule-extra/{{ jellyfin_molecule_marker_filename }}"
+        content: "{{ jellyfin_molecule_extra_volume_marker }}\n"
+        dest: "{{ jellyfin_molecule_extra_volume_src }}/{{ jellyfin_molecule_marker_filename }}"
         mode: "0644"

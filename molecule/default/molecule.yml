@@ -33,6 +33,20 @@ provisioner:
         jellyfin_debug_service_enabled: false
         jellyfin_restarts_check_enabled: true
 
+        # The host directory mounted into the container through
+        # `jellyfin_container_additional_volumes`, and the file placed in it by
+        # prepare.yml. Reading that file from inside the container is what
+        # proves the additional volumes reach the systemd unit rather than
+        # being merely declared in defaults/main.yml.
+        jellyfin_molecule_extra_volume_src: /jellyfin-molecule-extra
+        jellyfin_molecule_extra_volume_dst: /molecule-extra
+        jellyfin_molecule_extra_volume_marker: only-a-real-bind-mount-can-read-this
+
+        # Files placed on the host under the paths the role bind-mounts. Jellyfin
+        # itself is asked to list them back, so a mount that docker accepted but
+        # the process cannot see does not pass.
+        jellyfin_molecule_marker_filename: jellyfin-molecule-marker.txt
+
         # The container and network names the role derives from its identifier.
         # Role defaults are not in scope in a verify play, so they are spelled out.
         jellyfin_molecule_container: jellyfin
@@ -52,10 +66,13 @@ provisioner:
         jellyfin_molecule_admin_username: molecule-admin
         jellyfin_molecule_admin_password: molecule-admin-password
 
-        # Files placed on the host under the paths the role bind-mounts. Jellyfin
-        # itself is asked to list them back, so a mount that docker accepted but
-        # the process cannot see does not pass.
-        jellyfin_molecule_marker_filename: jellyfin-molecule-marker.txt
+        jellyfin_media_bind_path: /media
+
+        # Device passthrough, exercised up to the boundary CI allows: a runner
+        # has no /dev/dri, so a device that does exist is passed through instead.
+        # See molecule/README.md for what this does and does not prove.
+        jellyfin_gpu_path: /dev/null
+        jellyfin_gpu_bind_path: /dev/jellyfin-molecule-gpu
 
         jellyfin_hostname: jellyfin.molecule.local
 
@@ -63,17 +80,26 @@ provisioner:
         # redirect middlewares in templates/labels.j2.
         jellyfin_path_prefix: /jellyfin-ui
 
-        # Neither the role's default of Etc/UTC nor the test host's zone, so
-        # that the timezone the container ends up in can only have come from
-        # templates/env.j2.
-        jellyfin_environment_variables_tz: Asia/Tokyo
-
-        jellyfin_container_labels_traefik_enabled: true
-
         # Bound to the loopback interface of the test container only. Nothing
         # is published to the machine running Molecule, so two scenarios can
         # run side by side without fighting over a port.
         jellyfin_container_http_host_bind_port: "127.0.0.1:8096"
+
+        jellyfin_container_additional_volumes:
+          - type: bind
+            src: "{{ jellyfin_molecule_extra_volume_src }}"
+            dst: "{{ jellyfin_molecule_extra_volume_dst }}"
+            options: readonly
+
+        jellyfin_container_labels_traefik_enabled: true
+
+        jellyfin_container_labels_traefik_middleware_basic_auth_enabled: false
+
+        jellyfin_container_labels_additional_labels:
+          - mash.molecule.additional-label=set-by-the-role
+
+        jellyfin_container_extra_arguments:
+          - "--label=mash.molecule.extra-argument=set-by-the-role"
 
         # Reaches the process only through `JELLYFIN_PublishedServerUrl` in the
         # rendered environment file, and comes back out of the unauthenticated
@@ -87,24 +113,10 @@ provisioner:
         # rendered on a machine with an NVIDIA GPU.
         jellyfin_container_runtime: runc
 
-        # Device passthrough, exercised up to the boundary CI allows: a runner
-        # has no /dev/dri, so a device that does exist is passed through instead.
-        # See molecule/README.md for what this does and does not prove.
-        jellyfin_gpu_path: /dev/null
-        jellyfin_gpu_bind_path: /dev/jellyfin-molecule-gpu
-
-        jellyfin_media_bind_path: /media
-
-        jellyfin_container_labels_traefik_middleware_basic_auth_enabled: false
-
-        jellyfin_container_additional_volumes:
-          - type: bind
-            src: /jellyfin-molecule-extra
-            dst: /jellyfin-molecule-extra
-            options: readonly
-
-        jellyfin_container_extra_arguments:
-          - --label=jellyfin.molecule.extra-argument=applied
+        # Neither the role's default of Etc/UTC nor the test host's zone, so
+        # that the timezone the container ends up in can only have come from
+        # templates/env.j2.
+        jellyfin_environment_variables_tz: Asia/Tokyo
 
         jellyfin_environment_variables_additional_variables: |
           JELLYFIN_MOLECULE_MARKER=applied
