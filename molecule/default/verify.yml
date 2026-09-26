@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -379,19 +380,22 @@
           register: jellyfin_additional_volume_listing
           changed_when: false
 
+        # Reading the file back from inside the
+        # container is the difference between the variable existing and it working.
         - name: Read the marker through the additional volume
           ansible.builtin.command:
             cmd: >-
               docker exec jellyfin
               cat {{ jellyfin_molecule_extra_volume_dst }}/{{ jellyfin_molecule_marker_filename }}
-          register: jellyfin_extra_volume_marker
+          register: jellyfin_extra_volume
           changed_when: false
 
         - name: Assert the additional volume carries data into the container
           ansible.builtin.assert:
             that:
               - jellyfin_additional_volume_listing.status == 200
-              - jellyfin_extra_volume_marker.stdout | trim == jellyfin_molecule_extra_volume_marker
+              - jellyfin_extra_volume.rc == 0
+              - jellyfin_extra_volume.stdout | trim == jellyfin_molecule_extra_volume_marker
             fail_msg: "The additional volume did not carry the marker into the container"
             success_msg: "The additional volume carries the marker into the container"
 
