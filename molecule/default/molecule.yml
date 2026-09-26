@@ -95,14 +95,17 @@ provisioner:
 
         jellyfin_container_labels_traefik_middleware_basic_auth_enabled: false
 
+        jellyfin_container_labels_additional_labels:
+          - mash.molecule.additional-label=set-by-the-role
+
+        jellyfin_container_extra_arguments:
+          - "--label=mash.molecule.extra-argument=set-by-the-role"
+
         # Reaches the process only through `JELLYFIN_PublishedServerUrl` in the
         # rendered environment file, and comes back out of the unauthenticated
         # /System/Info/Public endpoint as `LocalAddress`. A stock container
         # reports its own listening address there instead.
         jellyfin_published_server_url: http://jellyfin.molecule.invalid:8096
-
-        jellyfin_container_extra_arguments:
-          - --label=jellyfin.molecule.extra-argument=applied
 
         # `runc` is the runtime docker would have used anyway, so this changes
         # nothing about how the container runs - it exists to render the

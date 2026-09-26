@@ -442,12 +442,6 @@
               published: {{ jellyfin_container.NetworkSettings.Ports.keys() | list }}
             success_msg: "The container publishes {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp on the {{ jellyfin_molecule_network }} network"
 
-        - name: Assert the extra container argument reached docker
-          ansible.builtin.assert:
-            that: jellyfin_container.Config.Labels['jellyfin.molecule.extra-argument'] | default('') == 'applied'
-            fail_msg: "jellyfin_container_extra_arguments did not reach the docker command line"
-            success_msg: "jellyfin_container_extra_arguments reaches the docker command line"
-
         - name: Assert the additional environment variable reached the container
           ansible.builtin.assert:
             that: "'JELLYFIN_MOLECULE_MARKER=applied' in jellyfin_container.Config.Env"
@@ -503,6 +497,17 @@
               - jellyfin_container.Config.Labels['traefik.http.services.jellyfin.loadbalancer.server.port'] == '8096'
             fail_msg: "The Traefik labels are not what templates/labels.j2 should have produced: {{ jellyfin_container.Config.Labels }}"
             success_msg: "The Traefik labels route {{ jellyfin_expected_hostname }}{{ jellyfin_expected_path_prefix }} to port 8096"
+
+        - name: Assert that the additional labels and extra arguments reached the container
+          ansible.builtin.assert:
+            that:
+              - jellyfin_container.Config.Labels['mash.molecule.additional-label'] == 'set-by-the-role'
+              - jellyfin_container.Config.Labels['mash.molecule.extra-argument'] == 'set-by-the-role'
+            fail_msg: >-
+              jellyfin_container_labels_additional_labels or
+              jellyfin_container_extra_arguments did not reach the container:
+              {{ jellyfin_container.Config.Labels }}
+            success_msg: "The additional label and the extra argument both reached the container"
 
         # ------------------------------------------------------------------
         # What the process inside the container actually sees
