@@ -330,6 +330,25 @@
         # made to list the directories back, so a mount that docker accepted but
         # that never reached the application would not pass.
         # ------------------------------------------------------------------
+
+        - name: Collect the mounts the role asked for
+          ansible.builtin.set_fact:
+            jellyfin_extra_mount: "{{ jellyfin_container.Mounts | selectattr('Destination', 'equalto', '/molecule-extra') | list }}"
+
+        # jellyfin_container_additional_volumes has been inert in several roles in
+        # this collection - rendered into a comment, or into a `-v` that silently
+        # dropped the options. Both the destination and the readonly option have
+        # to arrive.
+        - name: Assert that jellyfin_container_additional_volumes reached the container
+          ansible.builtin.assert:
+            that:
+              - jellyfin_extra_mount | length == 1
+              - jellyfin_extra_mount[0].Type == 'bind'
+              - jellyfin_extra_mount[0].Source == '/jellyfin-molecule-extra'
+              - not jellyfin_extra_mount[0].RW
+            fail_msg: "The additional volume did not reach the container: {{ jellyfin_container.Mounts }}"
+            success_msg: "The additional volume is mounted read-only at /molecule-extra"
+
         - name: List the Jellyfin media path through Jellyfin itself
           ansible.builtin.uri:
             url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_media_bind_path | urlencode }}&includeFiles=true"
