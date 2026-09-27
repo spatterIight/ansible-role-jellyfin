@@ -17,8 +17,9 @@
     jellyfin_molecule_data_path: /jellyfin/data
     jellyfin_molecule_library_database: /jellyfin/data/data/data/jellyfin.db
     jellyfin_molecule_control_url: "http://127.0.0.1:{{ jellyfin_molecule_control_bind_port }}"
-    # Jellyfin accepts an access token either in an `Authorization` header or in
-    # this one, which is far less fiddly to spell out.
+    # Jellyfin 12 disables legacy authorization (`X-Emby-Token` and friends) by
+    # default, so the access token travels in the `Authorization` header too,
+    # appended to this client header as `Token="..."`.
     jellyfin_molecule_client_header: 'MediaBrowser Client="molecule", Device="molecule", DeviceId="molecule", Version="1"'
 
     # The unusual values the scenario configures the role with. Written down
@@ -297,7 +298,7 @@
             url: "{{ jellyfin_molecule_url }}/System/Info"
             method: GET
             headers:
-              X-Emby-Token: "{{ jellyfin_molecule_token }}"
+              Authorization: '{{ jellyfin_molecule_client_header }}, Token="{{ jellyfin_molecule_token }}"'
             status_code: [200, 401]
           register: jellyfin_system_info
           changed_when: false
@@ -342,7 +343,7 @@
             url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_media_bind_path | urlencode }}&includeFiles=true"
             method: GET
             headers:
-              X-Emby-Token: "{{ jellyfin_molecule_token }}"
+              Authorization: '{{ jellyfin_molecule_client_header }}, Token="{{ jellyfin_molecule_token }}"'
             status_code: [200, 404]
           register: jellyfin_media_listing
           changed_when: false
@@ -362,7 +363,7 @@
             url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_container_additional_volumes[0].dst | urlencode }}&includeFiles=true"
             method: GET
             headers:
-              X-Emby-Token: "{{ jellyfin_molecule_token }}"
+              Authorization: '{{ jellyfin_molecule_client_header }}, Token="{{ jellyfin_molecule_token }}"'
             status_code: [200, 404]
           register: jellyfin_additional_volume_listing
           changed_when: false
