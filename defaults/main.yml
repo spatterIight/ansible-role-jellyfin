@@ -36,7 +36,7 @@ jellyfin_gpu_bind_path: ""
 # Quoted, so that a two-part version like `12.10` is not read as the number 12.1.
 # Renovate derives this from the image's `<version>ubu<base>-ls<build>` tags (see renovate.json).
 # renovate: datasource=docker depName=ghcr.io/linuxserver/jellyfin versioning=loose
-jellyfin_version: "10.11.11"
+jellyfin_version: "12.1"
 jellyfin_arch: amd64
 
 # Controls what user the Jellyfin process is run as inside of the container
