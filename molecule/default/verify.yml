@@ -17,8 +17,9 @@
     jellyfin_molecule_data_path: /jellyfin/data
     jellyfin_molecule_library_database: /jellyfin/data/data/data/jellyfin.db
     jellyfin_molecule_control_url: "http://127.0.0.1:{{ jellyfin_molecule_control_bind_port }}"
-    # Jellyfin accepts an access token either in an `Authorization` header or in
-    # this one, which is far less fiddly to spell out.
+    # Jellyfin 12 disables legacy authorization (`X-Emby-Token` and friends) by
+    # default, so the access token travels in the `Authorization` header too,
+    # appended to this client header as `Token="..."`.
     jellyfin_molecule_client_header: 'MediaBrowser Client="molecule", Device="molecule", DeviceId="molecule", Version="1"'
 
     # The unusual values the scenario configures the role with. Written down
@@ -45,6 +46,12 @@
           ansible.builtin.include_vars:
             file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
             name: jellyfin_defaults
+
+        # `jellyfin_container_image_tag` is templated from other defaults, which cannot be
+        # resolved inside the `jellyfin_defaults` namespace, so the expected tag is built here.
+        - name: Determine the image tag the role pins
+          ansible.builtin.set_fact:
+            jellyfin_expected_image_tag: "version-{{ jellyfin_defaults.jellyfin_version }}{{ jellyfin_defaults.jellyfin_container_image_tag_base_suffix }}"
 
         # ------------------------------------------------------------------
         # The negative control, started first so that it boots alongside the
@@ -170,8 +177,9 @@
         - name: Assert the running Jellyfin is the version this role installs
           ansible.builtin.assert:
             that:
-              - jellyfin_public_info.json.Version == jellyfin_defaults.jellyfin_version
-              - jellyfin_container.Config.Image is search(':' ~ jellyfin_defaults.jellyfin_version ~ '$')
+              # Jellyfin reports a two-part version with a trailing `.0` (`12.1` reports `12.1.0`)
+              - jellyfin_public_info.json.Version is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ '(\\.0)?$')
+              - jellyfin_container.Config.Image is search(':' ~ (jellyfin_expected_image_tag | regex_escape) ~ '$')
             fail_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
             success_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version }}"
 
@@ -290,7 +298,7 @@
             url: "{{ jellyfin_molecule_url }}/System/Info"
             method: GET
             headers:
-              X-Emby-Token: "{{ jellyfin_molecule_token }}"
+              Authorization: '{{ jellyfin_molecule_client_header }}, Token="{{ jellyfin_molecule_token }}"'
             status_code: [200, 401]
           register: jellyfin_system_info
           changed_when: false
@@ -335,7 +343,7 @@
             url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_media_bind_path | urlencode }}&includeFiles=true"
             method: GET
             headers:
-              X-Emby-Token: "{{ jellyfin_molecule_token }}"
+              Authorization: '{{ jellyfin_molecule_client_header }}, Token="{{ jellyfin_molecule_token }}"'
             status_code: [200, 404]
           register: jellyfin_media_listing
           changed_when: false
@@ -355,7 +363,7 @@
             url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_container_additional_volumes[0].dst | urlencode }}&includeFiles=true"
             method: GET
             headers:
-              X-Emby-Token: "{{ jellyfin_molecule_token }}"
+              Authorization: '{{ jellyfin_molecule_client_header }}, Token="{{ jellyfin_molecule_token }}"'
             status_code: [200, 404]
           register: jellyfin_additional_volume_listing
           changed_when: false
@@ -451,7 +459,7 @@
         - name: Assert that the container image is the pinned version
           ansible.builtin.assert:
             that:
-              - jellyfin_container.Config.Image == 'ghcr.io/linuxserver/jellyfin:' ~ jellyfin_defaults.jellyfin_version
+              - jellyfin_container.Config.Image == 'ghcr.io/linuxserver/jellyfin:' ~ jellyfin_expected_image_tag
             fail_msg: >-
               The container runs {{ jellyfin_container.Config.Image }}, not the
               {{ jellyfin_defaults.jellyfin_version }} pinned in defaults/main.yml
@@ -462,7 +470,7 @@
         # without it, a pin of 0.24.187 would happily match 0.24.1870ubu2604-ls403.
         - name: Assert the running Jellyfin is the version this role installs
           ansible.builtin.assert:
-            that: jellyfin_container.Config.Labels['org.opencontainers.image.version'] is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ 'ubu2604-ls[0-9]+$')
+            that: jellyfin_container.Config.Labels['org.opencontainers.image.version'] is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ (jellyfin_defaults.jellyfin_container_image_tag_base_suffix | regex_escape) ~ '-ls[0-9]+$')
             fail_msg: "Jellyfin reports {{ jellyfin_container.Config.Labels['org.opencontainers.image.version'] | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
             success_msg: "Jellyfin reports {{ jellyfin_container.Config.Labels['org.opencontainers.image.version'] }}"
 

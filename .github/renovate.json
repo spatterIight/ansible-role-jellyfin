@@ -2,16 +2,17 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": [
     "Patch releases of Jellyfin are deliberately not automerged: v10.11.10 was a patch that added two EF Core schema migrations (AddNormalizedUsername, AddUniqueNormalizedUsernameIndex) plus a data routine, and Jellyfin applies those forward-only against the operator's library database on the next restart. A Molecule run that installs a fresh Jellyfin structurally cannot see that risk, so every version bump here stays a reviewed pull request.",
-    "The rule below is what keeps Renovate pointed at Jellyfin at all: LinuxServer publishes 12458 tags for this image, and while strict semver already discards the arch-prefixed and -lsNN flavours, it still accepts the date-based tags the image carried in 2020-2021. Those sort above every real 10.x release."
+    "linuxserver.io tags this image `<Jellyfin version>ubu<base>-ls<build>` (e.g. `12.1ubu2604-ls50`). Since Jellyfin 12 it no longer adds a plain `<version>` tag, which is all that strict semver used to find, so Renovate stopped seeing new releases. The rule below reduces every tag to its Jellyfin version before comparing; the arch-prefixed, `version-*` and date-based (2020-2021) tags do not match it and are discarded. `loose` versioning (set in defaults/main.yml) is needed because Jellyfin 12 uses two-part versions (`12.1`)."
   ],
   "extends": [
     "github>mother-of-all-self-hosting/renovate-config#v1.1.0"
   ],
   "packageRules": [
     {
-      "description": "Ignore the date-based versioning scheme (YYYY.MM.DD) this image used until December 2021; without this, 2021.12.16 outranks every real Jellyfin release",
+      "description": "Compare linuxserver.io's `<version>ubu<base>-ls<build>` tags by their Jellyfin version, so that `jellyfin_version` stays a plain Jellyfin version",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ghcr.io/linuxserver/jellyfin"],
+      "extractVersion": "^(?<version>\\d+\\.\\d+(?:\\.\\d+)?)ubu\\d+-ls\\d+$",
       "allowedVersions": "!/^20[0-9]{2}\\./"
     }
   ]
