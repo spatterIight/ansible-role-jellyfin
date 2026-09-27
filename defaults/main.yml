@@ -32,8 +32,11 @@ jellyfin_gpu_path: "/dev/dri"
 # Takes a path value (e.g. "/dev/dri"), or empty string to not mount.
 jellyfin_gpu_bind_path: ""
 
-# renovate: datasource=docker depName=ghcr.io/linuxserver/jellyfin versioning=semver
-jellyfin_version: 10.11.11
+# The Jellyfin version, as Jellyfin itself numbers it (`10.11.11`, `12.1`).
+# Quoted, so that a two-part version like `12.10` is not read as the number 12.1.
+# Renovate derives this from the image's `<version>ubu<base>-ls<build>` tags (see renovate.json).
+# renovate: datasource=docker depName=ghcr.io/linuxserver/jellyfin versioning=loose
+jellyfin_version: "10.11.11"
 jellyfin_arch: amd64
 
 # Controls what user the Jellyfin process is run as inside of the container
@@ -53,7 +56,12 @@ jellyfin_hostname: ""
 jellyfin_path_prefix: /
 
 jellyfin_container_image: "{{ jellyfin_container_image_registry_prefix }}linuxserver/jellyfin:{{ jellyfin_container_image_tag }}"
-jellyfin_container_image_tag: "{{ jellyfin_version }}"
+# linuxserver.io stopped publishing plain `<version>` tags with Jellyfin 12 (`10.11.11` exists, `12.1` does not).
+# `version-<version>ubu<base>` is the tag it publishes for every release; like the plain tag used to,
+# it follows linuxserver.io's rebuilds of that Jellyfin version.
+jellyfin_container_image_tag: "version-{{ jellyfin_version }}{{ jellyfin_container_image_tag_base_suffix }}"
+# The base image linuxserver.io builds Jellyfin on, as it appears in the tag
+jellyfin_container_image_tag_base_suffix: ubu2604
 jellyfin_container_image_registry_prefix: "{{ jellyfin_container_image_registry_prefix_upstream }}"
 jellyfin_container_image_registry_prefix_upstream: "{{ jellyfin_container_image_registry_prefix_upstream_default }}"
 jellyfin_container_image_registry_prefix_upstream_default: ghcr.io/

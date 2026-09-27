@@ -46,6 +46,12 @@
             file: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/defaults/main.yml"
             name: jellyfin_defaults
 
+        # `jellyfin_container_image_tag` is templated from other defaults, which cannot be
+        # resolved inside the `jellyfin_defaults` namespace, so the expected tag is built here.
+        - name: Determine the image tag the role pins
+          ansible.builtin.set_fact:
+            jellyfin_expected_image_tag: "version-{{ jellyfin_defaults.jellyfin_version }}{{ jellyfin_defaults.jellyfin_container_image_tag_base_suffix }}"
+
         # ------------------------------------------------------------------
         # The negative control, started first so that it boots alongside the
         # assertions below rather than after them
@@ -170,8 +176,9 @@
         - name: Assert the running Jellyfin is the version this role installs
           ansible.builtin.assert:
             that:
-              - jellyfin_public_info.json.Version == jellyfin_defaults.jellyfin_version
-              - jellyfin_container.Config.Image is search(':' ~ jellyfin_defaults.jellyfin_version ~ '$')
+              # Jellyfin reports a two-part version with a trailing `.0` (`12.1` reports `12.1.0`)
+              - jellyfin_public_info.json.Version is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ '(\\.0)?$')
+              - jellyfin_container.Config.Image is search(':' ~ (jellyfin_expected_image_tag | regex_escape) ~ '$')
             fail_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
             success_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version }}"
 
@@ -451,7 +458,7 @@
         - name: Assert that the container image is the pinned version
           ansible.builtin.assert:
             that:
-              - jellyfin_container.Config.Image == 'ghcr.io/linuxserver/jellyfin:' ~ jellyfin_defaults.jellyfin_version
+              - jellyfin_container.Config.Image == 'ghcr.io/linuxserver/jellyfin:' ~ jellyfin_expected_image_tag
             fail_msg: >-
               The container runs {{ jellyfin_container.Config.Image }}, not the
               {{ jellyfin_defaults.jellyfin_version }} pinned in defaults/main.yml
@@ -462,7 +469,7 @@
         # without it, a pin of 0.24.187 would happily match 0.24.1870ubu2604-ls403.
         - name: Assert the running Jellyfin is the version this role installs
           ansible.builtin.assert:
-            that: jellyfin_container.Config.Labels['org.opencontainers.image.version'] is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ 'ubu2604-ls[0-9]+$')
+            that: jellyfin_container.Config.Labels['org.opencontainers.image.version'] is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ (jellyfin_defaults.jellyfin_container_image_tag_base_suffix | regex_escape) ~ '-ls[0-9]+$')
             fail_msg: "Jellyfin reports {{ jellyfin_container.Config.Labels['org.opencontainers.image.version'] | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
             success_msg: "Jellyfin reports {{ jellyfin_container.Config.Labels['org.opencontainers.image.version'] }}"
 
