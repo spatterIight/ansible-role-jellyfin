@@ -40,6 +40,7 @@ provisioner:
         # being merely declared in defaults/main.yml.
         jellyfin_molecule_extra_volume_src: /jellyfin-molecule-extra
         jellyfin_molecule_extra_volume_dst: /molecule-extra
+        jellyfin_molecule_extra_volume_marker: only-a-real-bind-mount-can-read-this
 
         # Files placed on the host under the paths the role bind-mounts. Jellyfin
         # itself is asked to list them back, so a mount that docker accepted but
