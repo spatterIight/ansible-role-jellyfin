@@ -34,7 +34,7 @@ provisioner:
         jellyfin_restarts_check_enabled: true
 
         # The host directory mounted into the container through
-        # `jellyfin_container_additional_volumes`, and the file placed in it by
+        # `jellyfin_container_additional_volumes_custom`, and the file placed in it by
         # prepare.yml. Reading that file from inside the container is what
         # proves the additional volumes reach the systemd unit rather than
         # being merely declared in defaults/main.yml.
@@ -85,7 +85,7 @@ provisioner:
         # run side by side without fighting over a port.
         jellyfin_container_http_host_bind_port: "127.0.0.1:8096"
 
-        jellyfin_container_additional_volumes:
+        jellyfin_container_additional_volumes_custom:
           - type: bind
             src: "{{ jellyfin_molecule_extra_volume_src }}"
             dst: "{{ jellyfin_molecule_extra_volume_dst }}"

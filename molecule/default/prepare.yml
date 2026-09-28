@@ -37,7 +37,7 @@
           storage-driver: fuse-overlayfs
 
     # Bind-mounted into the Jellyfin container through
-    # `jellyfin_container_additional_volumes`. The role does not create the source
+    # `jellyfin_container_additional_volumes_custom`. The role does not create the source
     # of an additional volume, so it has to exist before the container is
     # created, or `docker create` refuses the bind. verify.yml reads the marker
     # file back from inside the container, which only works if the systemd unit
