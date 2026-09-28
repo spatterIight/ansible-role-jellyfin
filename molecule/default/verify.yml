@@ -89,6 +89,7 @@
         # ------------------------------------------------------------------
         # The systemd unit
         # ------------------------------------------------------------------
+
         - name: Wait for the Jellyfin systemd services to become active (up to 180s each)
           ansible.builtin.systemd_service:
             name: "{{ item }}"
@@ -126,6 +127,7 @@
         # HTML splash page, so a 200 from the API is a real gate rather than a web
         # shell that renders regardless.
         # ------------------------------------------------------------------
+
         - name: Wait for the Jellyfin public system information endpoint
           ansible.builtin.uri:
             url: "{{ jellyfin_molecule_url }}/System/Info/Public"
@@ -215,6 +217,7 @@
         # get written to the bind-mounted data path, and what yields a token for the
         # authenticated API.
         # ------------------------------------------------------------------
+
         - name: Configure the Jellyfin first-run wizard
           ansible.builtin.uri:
             url: "{{ jellyfin_molecule_url }}/Startup/Configuration"
@@ -421,8 +424,9 @@
             success_msg: "Jellyfin's library database sits on the role's data path"
 
         # ------------------------------------------------------------------
-        # What `docker create` was actually told
+        # What the role told Docker to run
         # ------------------------------------------------------------------
+
         - name: Assert the container runtime the role was given was passed through
           ansible.builtin.assert:
             that: jellyfin_container.HostConfig.Runtime == jellyfin_container_runtime
@@ -550,6 +554,7 @@
         # again on the way down, so anything Jellyfin has to remember has to have
         # been written through the /config bind mount to survive.
         # ------------------------------------------------------------------
+
         - name: Restart the Jellyfin service
           ansible.builtin.systemd_service:
             name: jellyfin.service
@@ -581,6 +586,7 @@
         # ------------------------------------------------------------------
         # The negative control, which was started at the top of this play.
         # ------------------------------------------------------------------
+
         - name: Wait for the unconfigured Jellyfin negative control
           ansible.builtin.uri:
             url: "{{ jellyfin_molecule_control_url }}/System/Info/Public"
