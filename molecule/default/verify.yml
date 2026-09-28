@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Slavi Pantaleev
 # SPDX-FileCopyrightText: 2026 spatterlight
+# SPDX-FileCopyrightText: 2026 Suguru Hirahara
 #
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
@@ -88,6 +89,7 @@
         # ------------------------------------------------------------------
         # The systemd unit
         # ------------------------------------------------------------------
+
         - name: Wait for the Jellyfin systemd services to become active (up to 180s each)
           ansible.builtin.systemd_service:
             name: "{{ item }}"
@@ -125,6 +127,7 @@
         # HTML splash page, so a 200 from the API is a real gate rather than a web
         # shell that renders regardless.
         # ------------------------------------------------------------------
+
         - name: Wait for the Jellyfin public system information endpoint
           ansible.builtin.uri:
             url: "{{ jellyfin_molecule_url }}/System/Info/Public"
@@ -180,6 +183,7 @@
               # Jellyfin reports a two-part version with a trailing `.0` (`12.1` reports `12.1.0`)
               - jellyfin_public_info.json.Version is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ '(\\.0)?$')
               - jellyfin_container.Config.Image is search(':' ~ (jellyfin_expected_image_tag | regex_escape) ~ '$')
+              - jellyfin_container.Config.Labels['org.opencontainers.image.version'] is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ (jellyfin_defaults.jellyfin_container_image_tag_base_suffix | regex_escape) ~ '-ls[0-9]+$')
             fail_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
             success_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version }}"
 
@@ -214,6 +218,7 @@
         # get written to the bind-mounted data path, and what yields a token for the
         # authenticated API.
         # ------------------------------------------------------------------
+
         - name: Configure the Jellyfin first-run wizard
           ansible.builtin.uri:
             url: "{{ jellyfin_molecule_url }}/Startup/Configuration"
@@ -338,6 +343,25 @@
         # made to list the directories back, so a mount that docker accepted but
         # that never reached the application would not pass.
         # ------------------------------------------------------------------
+
+        - name: Collect the mounts the role asked for
+          ansible.builtin.set_fact:
+            jellyfin_extra_mount: "{{ jellyfin_container.Mounts | selectattr('Destination', 'equalto', jellyfin_molecule_extra_volume_dst) | list }}"
+
+        # jellyfin_container_additional_volumes_custom has been inert in several roles in
+        # this collection - rendered into a comment, or into a `-v` that silently
+        # dropped the options. Both the destination and the readonly option have
+        # to arrive.
+        - name: Assert that jellyfin_container_additional_volumes_custom reached the container
+          ansible.builtin.assert:
+            that:
+              - jellyfin_extra_mount | length == 1
+              - jellyfin_extra_mount[0].Type == 'bind'
+              - jellyfin_extra_mount[0].Source == jellyfin_molecule_extra_volume_src
+              - not jellyfin_extra_mount[0].RW
+            fail_msg: "The additional volume did not reach the container: {{ jellyfin_container.Mounts }}"
+            success_msg: "The additional volume is mounted read-only at {{ jellyfin_molecule_extra_volume_dst }}"
+
         - name: List the Jellyfin media path through Jellyfin itself
           ansible.builtin.uri:
             url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_media_bind_path | urlencode }}&includeFiles=true"
@@ -360,7 +384,7 @@
 
         - name: List the Jellyfin additional volume through Jellyfin itself
           ansible.builtin.uri:
-            url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_container_additional_volumes[0].dst | urlencode }}&includeFiles=true"
+            url: "{{ jellyfin_molecule_url }}/Environment/DirectoryContents?path={{ jellyfin_container_additional_volumes_custom[0].dst | urlencode }}&includeFiles=true"
             method: GET
             headers:
               Authorization: '{{ jellyfin_molecule_client_header }}, Token="{{ jellyfin_molecule_token }}"'
@@ -368,16 +392,24 @@
           register: jellyfin_additional_volume_listing
           changed_when: false
 
-        - name: Assert the Jellyfin additional volume reached the process
+        # Reading the file back from inside the
+        # container is the difference between the variable existing and it working.
+        - name: Read the marker through the additional volume
+          ansible.builtin.command:
+            cmd: >-
+              docker exec jellyfin
+              cat {{ jellyfin_molecule_extra_volume_dst }}/{{ jellyfin_molecule_marker_filename }}
+          register: jellyfin_extra_volume
+          changed_when: false
+
+        - name: Assert the additional volume carries data into the container
           ansible.builtin.assert:
             that:
               - jellyfin_additional_volume_listing.status == 200
-              - jellyfin_molecule_marker_filename in (jellyfin_additional_volume_listing.json | map(attribute='Name') | list)
-            fail_msg: >-
-              Jellyfin cannot see {{ jellyfin_molecule_marker_filename }} under
-              {{ jellyfin_container_additional_volumes[0].dst }}, so
-              jellyfin_container_additional_volumes is inert
-            success_msg: "Jellyfin sees the additional volume at {{ jellyfin_container_additional_volumes[0].dst }}"
+              - jellyfin_extra_volume.rc == 0
+              - jellyfin_extra_volume.stdout | trim == jellyfin_molecule_extra_volume_marker
+            fail_msg: "The additional volume did not carry the marker into the container"
+            success_msg: "The additional volume carries the marker into the container"
 
         - name: Check the Jellyfin library database on the host
           ansible.builtin.stat:
@@ -393,8 +425,9 @@
             success_msg: "Jellyfin's library database sits on the role's data path"
 
         # ------------------------------------------------------------------
-        # What `docker create` was actually told
+        # What the role told Docker to run
         # ------------------------------------------------------------------
+
         - name: Assert the container runtime the role was given was passed through
           ansible.builtin.assert:
             that: jellyfin_container.HostConfig.Runtime == jellyfin_container_runtime
@@ -425,12 +458,6 @@
               The container does not publish {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp;
               published: {{ jellyfin_container.NetworkSettings.Ports.keys() | list }}
             success_msg: "The container publishes {{ jellyfin_defaults.jellyfin_container_http_port }}/tcp on the {{ jellyfin_molecule_network }} network"
-
-        - name: Assert the extra container argument reached docker
-          ansible.builtin.assert:
-            that: jellyfin_container.Config.Labels['jellyfin.molecule.extra-argument'] | default('') == 'applied'
-            fail_msg: "jellyfin_container_extra_arguments did not reach the docker command line"
-            success_msg: "jellyfin_container_extra_arguments reaches the docker command line"
 
         - name: Assert the additional environment variable reached the container
           ansible.builtin.assert:
@@ -465,15 +492,6 @@
               {{ jellyfin_defaults.jellyfin_version }} pinned in defaults/main.yml
             success_msg: "The container runs {{ jellyfin_container.Config.Image }}"
 
-        # linuxserver.io stamps its own build onto the image as
-        # `<Jellyfin version>ubu2604-ls<rebuild counter>`. The trailing `ubu2604-ls` matters:
-        # without it, a pin of 0.24.187 would happily match 0.24.1870ubu2604-ls403.
-        - name: Assert the running Jellyfin is the version this role installs
-          ansible.builtin.assert:
-            that: jellyfin_container.Config.Labels['org.opencontainers.image.version'] is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ (jellyfin_defaults.jellyfin_container_image_tag_base_suffix | regex_escape) ~ '-ls[0-9]+$')
-            fail_msg: "Jellyfin reports {{ jellyfin_container.Config.Labels['org.opencontainers.image.version'] | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
-            success_msg: "Jellyfin reports {{ jellyfin_container.Config.Labels['org.opencontainers.image.version'] }}"
-
         # ------------------------------------------------------------------
         # Traefik labels
         # ------------------------------------------------------------------
@@ -487,6 +505,17 @@
               - jellyfin_container.Config.Labels['traefik.http.services.jellyfin.loadbalancer.server.port'] == '8096'
             fail_msg: "The Traefik labels are not what templates/labels.j2 should have produced: {{ jellyfin_container.Config.Labels }}"
             success_msg: "The Traefik labels route {{ jellyfin_expected_hostname }}{{ jellyfin_expected_path_prefix }} to port 8096"
+
+        - name: Assert that the additional labels and extra arguments reached the container
+          ansible.builtin.assert:
+            that:
+              - jellyfin_container.Config.Labels['mash.molecule.additional-label'] == 'set-by-the-role'
+              - jellyfin_container.Config.Labels['mash.molecule.extra-argument'] == 'set-by-the-role'
+            fail_msg: >-
+              jellyfin_container_labels_additional_labels or
+              jellyfin_container_extra_arguments did not reach the container:
+              {{ jellyfin_container.Config.Labels }}
+            success_msg: "The additional label and the extra argument both reached the container"
 
         # ------------------------------------------------------------------
         # What the process inside the container actually sees
@@ -517,6 +546,7 @@
         # again on the way down, so anything Jellyfin has to remember has to have
         # been written through the /config bind mount to survive.
         # ------------------------------------------------------------------
+
         - name: Restart the Jellyfin service
           ansible.builtin.systemd_service:
             name: jellyfin.service
@@ -548,6 +578,7 @@
         # ------------------------------------------------------------------
         # The negative control, which was started at the top of this play.
         # ------------------------------------------------------------------
+
         - name: Wait for the unconfigured Jellyfin negative control
           ansible.builtin.uri:
             url: "{{ jellyfin_molecule_control_url }}/System/Info/Public"
