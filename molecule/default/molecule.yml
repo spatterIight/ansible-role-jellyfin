@@ -33,6 +33,19 @@ provisioner:
         jellyfin_debug_service_enabled: false
         jellyfin_restarts_check_enabled: true
 
+        # The host directory mounted into the container through
+        # `jellyfin_container_additional_volumes`, and the file placed in it by
+        # prepare.yml. Reading that file from inside the container is what
+        # proves the additional volumes reach the systemd unit rather than
+        # being merely declared in defaults/main.yml.
+        jellyfin_molecule_extra_volume_src: /jellyfin-molecule-extra
+        jellyfin_molecule_extra_volume_dst: /molecule-extra
+
+        # Files placed on the host under the paths the role bind-mounts. Jellyfin
+        # itself is asked to list them back, so a mount that docker accepted but
+        # the process cannot see does not pass.
+        jellyfin_molecule_marker_filename: jellyfin-molecule-marker.txt
+
         # The container and network names the role derives from its identifier.
         # Role defaults are not in scope in a verify play, so they are spelled out.
         jellyfin_molecule_container: jellyfin
@@ -51,11 +64,6 @@ provisioner:
         # that the library database on the role's bind mount is writable.
         jellyfin_molecule_admin_username: molecule-admin
         jellyfin_molecule_admin_password: molecule-admin-password
-
-        # Files placed on the host under the paths the role bind-mounts. Jellyfin
-        # itself is asked to list them back, so a mount that docker accepted but
-        # the process cannot see does not pass.
-        jellyfin_molecule_marker_filename: jellyfin-molecule-marker.txt
 
         jellyfin_media_bind_path: /media
 
@@ -78,8 +86,8 @@ provisioner:
 
         jellyfin_container_additional_volumes:
           - type: bind
-            src: /jellyfin-molecule-extra
-            dst: /jellyfin-molecule-extra
+            src: "{{ jellyfin_molecule_extra_volume_src }}"
+            dst: "{{ jellyfin_molecule_extra_volume_dst }}"
             options: readonly
 
         jellyfin_container_labels_traefik_enabled: true
