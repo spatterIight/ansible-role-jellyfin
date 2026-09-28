@@ -57,35 +57,7 @@ provisioner:
         # the process cannot see does not pass.
         jellyfin_molecule_marker_filename: jellyfin-molecule-marker.txt
 
-        jellyfin_hostname: jellyfin.molecule.local
-
-        # A non-root path prefix exercises the strip-prefix and slashless
-        # redirect middlewares in templates/labels.j2.
-        jellyfin_path_prefix: /jellyfin-ui
-
-        # Neither the role's default of Etc/UTC nor the test host's zone, so
-        # that the timezone the container ends up in can only have come from
-        # templates/env.j2.
-        jellyfin_environment_variables_tz: Asia/Tokyo
-
-        jellyfin_container_labels_traefik_enabled: true
-
-        # Bound to the loopback interface of the test container only. Nothing
-        # is published to the machine running Molecule, so two scenarios can
-        # run side by side without fighting over a port.
-        jellyfin_container_http_host_bind_port: "127.0.0.1:8096"
-
-        # Reaches the process only through `JELLYFIN_PublishedServerUrl` in the
-        # rendered environment file, and comes back out of the unauthenticated
-        # /System/Info/Public endpoint as `LocalAddress`. A stock container
-        # reports its own listening address there instead.
-        jellyfin_published_server_url: http://jellyfin.molecule.invalid:8096
-
-        # `runc` is the runtime docker would have used anyway, so this changes
-        # nothing about how the container runs - it exists to render the
-        # `--runtime` branch of the systemd unit, which is otherwise only ever
-        # rendered on a machine with an NVIDIA GPU.
-        jellyfin_container_runtime: runc
+        jellyfin_media_bind_path: /media
 
         # Device passthrough, exercised up to the boundary CI allows: a runner
         # has no /dev/dri, so a device that does exist is passed through instead.
@@ -93,9 +65,16 @@ provisioner:
         jellyfin_gpu_path: /dev/null
         jellyfin_gpu_bind_path: /dev/jellyfin-molecule-gpu
 
-        jellyfin_media_bind_path: /media
+        jellyfin_hostname: jellyfin.molecule.local
 
-        jellyfin_container_labels_traefik_middleware_basic_auth_enabled: false
+        # A non-root path prefix exercises the strip-prefix and slashless
+        # redirect middlewares in templates/labels.j2.
+        jellyfin_path_prefix: /jellyfin-ui
+
+        # Bound to the loopback interface of the test container only. Nothing
+        # is published to the machine running Molecule, so two scenarios can
+        # run side by side without fighting over a port.
+        jellyfin_container_http_host_bind_port: "127.0.0.1:8096"
 
         jellyfin_container_additional_volumes:
           - type: bind
@@ -103,8 +82,29 @@ provisioner:
             dst: /jellyfin-molecule-extra
             options: readonly
 
+        jellyfin_container_labels_traefik_enabled: true
+
+        jellyfin_container_labels_traefik_middleware_basic_auth_enabled: false
+
+        # Reaches the process only through `JELLYFIN_PublishedServerUrl` in the
+        # rendered environment file, and comes back out of the unauthenticated
+        # /System/Info/Public endpoint as `LocalAddress`. A stock container
+        # reports its own listening address there instead.
+        jellyfin_published_server_url: http://jellyfin.molecule.invalid:8096
+
         jellyfin_container_extra_arguments:
           - --label=jellyfin.molecule.extra-argument=applied
+
+        # `runc` is the runtime docker would have used anyway, so this changes
+        # nothing about how the container runs - it exists to render the
+        # `--runtime` branch of the systemd unit, which is otherwise only ever
+        # rendered on a machine with an NVIDIA GPU.
+        jellyfin_container_runtime: runc
+
+        # Neither the role's default of Etc/UTC nor the test host's zone, so
+        # that the timezone the container ends up in can only have come from
+        # templates/env.j2.
+        jellyfin_environment_variables_tz: Asia/Tokyo
 
         jellyfin_environment_variables_additional_variables: |
           JELLYFIN_MOLECULE_MARKER=applied
