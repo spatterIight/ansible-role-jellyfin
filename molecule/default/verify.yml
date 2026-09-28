@@ -183,6 +183,7 @@
               # Jellyfin reports a two-part version with a trailing `.0` (`12.1` reports `12.1.0`)
               - jellyfin_public_info.json.Version is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ '(\\.0)?$')
               - jellyfin_container.Config.Image is search(':' ~ (jellyfin_expected_image_tag | regex_escape) ~ '$')
+              - jellyfin_container.Config.Labels['org.opencontainers.image.version'] is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ (jellyfin_defaults.jellyfin_container_image_tag_base_suffix | regex_escape) ~ '-ls[0-9]+$')
             fail_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
             success_msg: "Jellyfin reports {{ jellyfin_public_info.json.Version }}"
 
@@ -490,15 +491,6 @@
               The container runs {{ jellyfin_container.Config.Image }}, not the
               {{ jellyfin_defaults.jellyfin_version }} pinned in defaults/main.yml
             success_msg: "The container runs {{ jellyfin_container.Config.Image }}"
-
-        # linuxserver.io stamps its own build onto the image as
-        # `<Jellyfin version>ubu2604-ls<rebuild counter>`. The trailing `ubu2604-ls` matters:
-        # without it, a pin of 0.24.187 would happily match 0.24.1870ubu2604-ls403.
-        - name: Assert the running Jellyfin is the version this role installs
-          ansible.builtin.assert:
-            that: jellyfin_container.Config.Labels['org.opencontainers.image.version'] is match((jellyfin_defaults.jellyfin_version | regex_escape) ~ (jellyfin_defaults.jellyfin_container_image_tag_base_suffix | regex_escape) ~ '-ls[0-9]+$')
-            fail_msg: "Jellyfin reports {{ jellyfin_container.Config.Labels['org.opencontainers.image.version'] | default('none') }}, expected {{ jellyfin_defaults.jellyfin_version }}"
-            success_msg: "Jellyfin reports {{ jellyfin_container.Config.Labels['org.opencontainers.image.version'] }}"
 
         # ------------------------------------------------------------------
         # Traefik labels
