@@ -342,7 +342,7 @@
 
         - name: Collect the mounts the role asked for
           ansible.builtin.set_fact:
-            jellyfin_extra_mount: "{{ jellyfin_container.Mounts | selectattr('Destination', 'equalto', '/molecule-extra') | list }}"
+            jellyfin_extra_mount: "{{ jellyfin_container.Mounts | selectattr('Destination', 'equalto', jellyfin_molecule_extra_volume_dst) | list }}"
 
         # jellyfin_container_additional_volumes has been inert in several roles in
         # this collection - rendered into a comment, or into a `-v` that silently
@@ -353,10 +353,10 @@
             that:
               - jellyfin_extra_mount | length == 1
               - jellyfin_extra_mount[0].Type == 'bind'
-              - jellyfin_extra_mount[0].Source == '/jellyfin-molecule-extra'
+              - jellyfin_extra_mount[0].Source == jellyfin_molecule_extra_volume_src
               - not jellyfin_extra_mount[0].RW
             fail_msg: "The additional volume did not reach the container: {{ jellyfin_container.Mounts }}"
-            success_msg: "The additional volume is mounted read-only at /molecule-extra"
+            success_msg: "The additional volume is mounted read-only at {{ jellyfin_molecule_extra_volume_dst }}"
 
         - name: List the Jellyfin media path through Jellyfin itself
           ansible.builtin.uri:
